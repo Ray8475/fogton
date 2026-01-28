@@ -1,0 +1,6 @@
+.env
+backend/app.db
+logs/
+__pycache__/
+*.pyc
+

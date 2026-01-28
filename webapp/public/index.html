@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gifts Futures MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100">
+    <div class="max-w-xl mx-auto p-4 space-y-4">
+      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800">
+        <h1 class="text-xl font-semibold">Gifts Futures (MVP)</h1>
+        <p class="text-slate-300 text-sm">Авторизация через Telegram WebApp initData → JWT.</p>
+      </div>
+
+      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
+        <div class="text-sm text-slate-300">
+          <div><span class="font-medium text-slate-200">API:</span> <span id="apiBase"></span></div>
+          <div><span class="font-medium text-slate-200">Статус:</span> <span id="status">не авторизован</span></div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs text-slate-400">API base URL (можно менять без правки ссылки)</label>
+          <div class="flex gap-2">
+            <input id="apiInput" class="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-100" placeholder="http://127.0.0.1:8000" />
+            <button id="btnSaveApi" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-2 text-sm">
+              Сохранить
+            </button>
+          </div>
+        </div>
+
+        <button id="btnAuth" class="w-full rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 font-medium">
+          Авторизоваться
+        </button>
+      </div>
+
+      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
+        <h2 class="font-semibold">Баланс</h2>
+        <pre id="balances" class="text-xs text-slate-200 whitespace-pre-wrap"></pre>
+      </div>
+
+      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
+        <h2 class="font-semibold">Рынки</h2>
+        <pre id="markets" class="text-xs text-slate-200 whitespace-pre-wrap"></pre>
+      </div>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+      const apiFromQuery = params.get("api");
+      const apiFromStorage = localStorage.getItem("apiBase");
+      let API_BASE = apiFromQuery || apiFromStorage || "http://127.0.0.1:8000";
+
+      const apiBaseEl = document.getElementById("apiBase");
+      const apiInputEl = document.getElementById("apiInput");
+      apiBaseEl.textContent = API_BASE;
+      apiInputEl.value = API_BASE;
+
+      document.getElementById("btnSaveApi").addEventListener("click", () => {
+        const v = (apiInputEl.value || "").trim();
+        if (!v) return;
+        API_BASE = v;
+        localStorage.setItem("apiBase", v);
+        apiBaseEl.textContent = v;
+      });
+
+      let token = null;
+
+      async function api(path, opts = {}) {
+        const headers = Object.assign({}, opts.headers || {});
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        if (opts.json) {
+          headers["Content-Type"] = "application/json";
+          opts.body = JSON.stringify(opts.json);
+        }
+        const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+        const txt = await res.text();
+        let data;
+        try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        return data;
+      }
+
+      async function loadData() {
+        const balances = await api("/me/balances");
+        document.getElementById("balances").textContent = JSON.stringify(balances, null, 2);
+        const markets = await api("/markets");
+        document.getElementById("markets").textContent = JSON.stringify(markets, null, 2);
+      }
+
+      document.getElementById("btnAuth").addEventListener("click", async () => {
+        try {
+          const tg = window.Telegram?.WebApp;
+          if (!tg) throw new Error("Telegram WebApp API недоступен (открой через Telegram).");
+          tg.ready();
+          const initData = tg.initData;
+          if (!initData) throw new Error("initData пустой.");
+
+          const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
+          token = out.token;
+          document.getElementById("status").textContent = `ok, user_id=${out.user.id}`;
+          await loadData();
+        } catch (e) {
+          document.getElementById("status").textContent = `ошибка: ${e.message}`;
+        }
+      });
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+PyJWT
+SQLAlchemy
+alembic
+pydantic
+aiohttp
+
+# Bot (aiogram v3 works better with Python 3.14+)
+aiogram>=3.0.0
+
