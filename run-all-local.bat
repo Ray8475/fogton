@@ -8,6 +8,28 @@ if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
 echo Project root: %ROOT%
 
+REM Проверяем, заняты ли порты
+echo Checking if ports are available...
+netstat -ano | findstr ":8000" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo WARNING: Port 8000 is already in use!
+    echo Killing processes on port 8000...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do (
+        taskkill /PID %%a /F >nul 2>&1
+    )
+    timeout /t 1 /nobreak >nul
+)
+
+netstat -ano | findstr ":8081" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo WARNING: Port 8081 is already in use!
+    echo Killing processes on port 8081...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8081" ^| findstr "LISTENING"') do (
+        taskkill /PID %%a /F >nul 2>&1
+    )
+    timeout /t 1 /nobreak >nul
+)
+
 echo Starting API (uvicorn) on http://0.0.0.0:8000 ...
 REM /k чтобы окно не закрывалось сразу при ошибке
 start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
