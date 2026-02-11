@@ -4,8 +4,9 @@ vision.md, conventions.md.
 """
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.db.database import Base, engine
 from app.db import models  # noqa: F401 — регистрация таблиц в Base.metadata
@@ -15,8 +16,18 @@ from app.routes.me import router as me_router
 from app.routes.markets import router as markets_router
 
 
+class KeepAliveMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Keep-Alive"] = "timeout=75, max=1000"
+        response.headers["Connection"] = "keep-alive"
+        return response
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Gifts Futures API")
+
+    app.add_middleware(KeepAliveMiddleware)
 
     # CORS: позволяем Mini App (GitHub Pages / app.fogton.ru) ходить в API
     app.add_middleware(

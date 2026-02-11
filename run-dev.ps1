@@ -28,7 +28,7 @@ if (-not $NoApi) {
     $apiLog = Join-Path $RunDir "api.log"
     $apiErr = Join-Path $RunDir "api.error.log"
     Start-Process python -ArgumentList @(
-        "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"
+        "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "75"
     ) -WorkingDirectory (Join-Path $Root "backend") `
       -RedirectStandardOutput $apiLog `
       -RedirectStandardError $apiErr `

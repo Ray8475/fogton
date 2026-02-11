@@ -12,7 +12,7 @@ Write-Host "Project root: $Root" -ForegroundColor Cyan
 if (-not $NoApi) {
     Write-Host "Starting API (uvicorn) on http://0.0.0.0:8000 ..." -ForegroundColor Green
     Start-Process python -ArgumentList @(
-        "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"
+        "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "75"
     ) -WorkingDirectory (Join-Path $Root "backend")
 }
 
@@ -31,7 +31,7 @@ if (-not $NoTunnel) {
     else {
         Write-Host "Starting Cloudflare Tunnel (cloudflared) ..." -ForegroundColor Green
         Start-Process cloudflared.exe -ArgumentList @(
-            "tunnel", "run", "--protocol", "http2", "--token", $token
+            "tunnel", "run", "--protocol", "http2", "--no-autoupdate", "--grace-period", "30s", "--token", $token
         ) -WorkingDirectory $Root
     }
 }

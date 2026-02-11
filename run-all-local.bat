@@ -32,7 +32,7 @@ if %errorlevel% equ 0 (
 
 echo Starting API (uvicorn) on http://0.0.0.0:8000 ...
 REM /k чтобы окно не закрывалось сразу при ошибке
-start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
 
 echo Starting bot (run_bot.py) ...
 REM /k чтобы видеть traceback, если бот упадёт
@@ -49,7 +49,7 @@ if "%TUNNEL_TOKEN%"=="" (
     echo Skipping Cloudflare Tunnel startup.
 ) else (
     REM /k чтобы видеть ошибки туннеля
-    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --protocol http2 --token "%TUNNEL_TOKEN%"
+    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --protocol http2 --no-autoupdate --grace-period 30s --token "%TUNNEL_TOKEN%"
 )
 
 echo.
