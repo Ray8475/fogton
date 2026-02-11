@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://telegram.org" crossorigin />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
       :root {
         --bg-color: var(--tg-theme-bg-color, #0f172a);
@@ -132,6 +133,13 @@
           <div id="balances" class="text-sm space-y-1 tg-text">
             <div class="text-xs tg-hint">Загрузка...</div>
           </div>
+        </div>
+        <div class="rounded-xl p-4 space-y-3 tg-card mt-4">
+          <h2 class="font-semibold tg-text">Привязанный TON-кошелёк</h2>
+          <div id="connectedWalletBlock" class="text-sm tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
+          </div>
+          <div id="ton-connect-btn" class="mt-2"></div>
         </div>
         <div class="rounded-xl p-4 space-y-3 tg-card mt-4">
           <h2 class="font-semibold tg-text">Пополнить</h2>
@@ -270,6 +278,57 @@
         });
       }
 
+      let tonConnectUI = null;
+
+      function renderConnectedWallet(me) {
+        const el = document.getElementById("connectedWalletBlock");
+        if (!el) return;
+        const addr = me && me.connected_ton_address ? me.connected_ton_address : null;
+        if (addr) {
+          const short = addr.length > 20 ? addr.slice(0, 8) + "…" + addr.slice(-8) : addr;
+          el.innerHTML = "";
+          const p = document.createElement("p");
+          p.className = "text-xs font-mono tg-text break-all";
+          p.textContent = short;
+          p.title = addr;
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "mt-2 rounded-lg px-3 py-1.5 text-xs tg-btn";
+          btn.textContent = "Отвязать";
+          btn.addEventListener("click", () => {
+            api("/me/wallet", { method: "DELETE" })
+              .then(() => {
+                if (tonConnectUI) tonConnectUI.disconnect();
+                return api("/me");
+              })
+              .then((meData) => { renderConnectedWallet(meData); })
+              .catch((e) => { el.appendChild(document.createTextNode(" Ошибка: " + (e && e.message))); });
+          });
+          el.appendChild(p);
+          el.appendChild(btn);
+        } else {
+          el.innerHTML = "<p class=\"text-xs tg-hint\">Подключите кошелёк кнопкой ниже.</p>";
+        }
+      }
+
+      function initTonConnect() {
+        if (typeof TON_CONNECT_UI === "undefined" || tonConnectUI) return;
+        const manifestUrl = location.origin + "/tonconnect-manifest.json";
+        tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+          manifestUrl,
+          buttonRootId: "ton-connect-btn",
+          uiOptions: { language: "ru" },
+        });
+        tonConnectUI.onStatusChange((data) => {
+          if (data && data.account && token) {
+            api("/me/wallet", { method: "POST", json: { address: data.account.address } })
+              .then(() => api("/me"))
+              .then((meData) => renderConnectedWallet(meData))
+              .catch(() => {});
+          }
+        });
+      }
+
       function renderBalances(balances) {
         const el = document.getElementById("balances");
         el.innerHTML = "";
@@ -403,6 +462,7 @@
 
         if (meResult.status === "fulfilled") {
           renderProfile(meResult.value);
+          renderConnectedWallet(meResult.value);
         } else if (profileEl) {
           setSectionError("profile", meResult.reason?.message || "Не удалось загрузить");
         }
@@ -441,6 +501,7 @@
           appRoot.classList.remove("hidden");
           bottomNav.classList.remove("hidden");
 
+          initTonConnect();
           loadData();
         } catch (e) {
           const msg = e.message === "Failed to fetch" || e.name === "TypeError"

@@ -26,6 +26,7 @@ def require_user_id(creds: HTTPAuthorizationCredentials = Depends(security)) -> 
 class MeOut(BaseModel):
     id: int
     telegram_user_id: str
+    connected_ton_address: str | None = None
 
 
 @router.get("", response_model=MeOut)
@@ -33,7 +34,11 @@ def get_me(user_id: int = Depends(require_user_id), db: Session = Depends(get_db
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return MeOut(id=user.id, telegram_user_id=user.telegram_user_id)
+    return MeOut(
+        id=user.id,
+        telegram_user_id=user.telegram_user_id,
+        connected_ton_address=user.connected_ton_address,
+    )
 
 
 @router.get("/balances")
@@ -61,4 +66,49 @@ def deposit_instruction(
     address = settings.deposit_wallet_address or ""
     comment = f"u{user_id}"
     return DepositInstructionOut(address=address, comment=comment)
+
+
+def _is_ton_address(s: str) -> bool:
+    s = (s or "").strip()
+    if not s or len(s) > 67:
+        return False
+    return (
+        s.startswith("EQ") or s.startswith("UQ")
+        or s.startswith("0:") or s.startswith("-1:")
+    )
+
+
+class WalletConnectIn(BaseModel):
+    address: str
+
+
+@router.post("/wallet")
+def connect_wallet(
+    body: WalletConnectIn,
+    user_id: int = Depends(require_user_id),
+    db: Session = Depends(get_db),
+):
+    """Привязать TON-кошелёк (адрес получен через TON Connect на клиенте)."""
+    if not _is_ton_address(body.address):
+        raise HTTPException(status_code=400, detail="Invalid TON address")
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.connected_ton_address = body.address.strip()
+    db.commit()
+    return {"ok": True, "address": user.connected_ton_address}
+
+
+@router.delete("/wallet")
+def disconnect_wallet(
+    user_id: int = Depends(require_user_id),
+    db: Session = Depends(get_db),
+):
+    """Отвязать TON-кошелёк."""
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.connected_ton_address = None
+    db.commit()
+    return {"ok": True}
 

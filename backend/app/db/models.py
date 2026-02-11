@@ -18,6 +18,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     telegram_user_id: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    connected_ton_address: Mapped[str | None] = mapped_column(String(68), nullable=True)
 
 
 class Gift(Base):
