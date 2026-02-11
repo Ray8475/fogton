@@ -40,6 +40,27 @@
         border-color: var(--header-bg-color) !important;
         color: var(--text-color) !important;
       }
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 1rem;
+        border: 3px solid var(--header-bg-color);
+        border-top-color: var(--button-color);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .loading-card {
+        background: var(--secondary-bg-color) !important;
+        border-radius: 1.25rem;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        max-width: 18rem;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
@@ -56,11 +77,11 @@
     </div>
 
     <!-- Экран загрузки -->
-    <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
-      <div class="max-w-xs w-full rounded-2xl px-6 py-5 space-y-3 text-center tg-card">
-        <div class="text-sm font-semibold tg-text">Gifts Futures (MVP)</div>
-        <div class="text-xs tg-hint">Авторизация через Telegram WebApp initData → JWT.</div>
-        <div class="text-sm tg-text" id="status">Запуск Mini App…</div>
+    <div id="loadingScreen" class="min-h-screen flex items-center justify-center p-4">
+      <div class="loading-card">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <h1 class="text-lg font-semibold tg-text mb-1">Gifts Futures</h1>
+        <p class="text-sm tg-hint" id="status">Загрузка…</p>
       </div>
     </div>
 
@@ -307,7 +328,7 @@
           const initData = tg.initData;
           if (!initData) throw new Error("initData пустой.");
 
-          statusEl.textContent = "Авторизация через Telegram…";
+          statusEl.textContent = "Загрузка…";
           const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
           token = out.token;
           
