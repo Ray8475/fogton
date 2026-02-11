@@ -84,6 +84,9 @@
 
       let token = null;
 
+      const API_RETRIES = 3;
+      const API_RETRY_DELAY_MS = 600;
+
       async function api(path, opts = {}) {
         const headers = Object.assign({}, opts.headers || {});
         if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -92,22 +95,33 @@
           opts.body = JSON.stringify(opts.json);
         }
         const url = `${API_BASE}${path}`;
-        console.log(`[API] Request: ${opts.method || "GET"} ${url}`);
-        try {
-          const res = await fetch(url, { ...opts, headers });
-          const txt = await res.text();
-          let data;
-          try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-          if (!res.ok) {
-            console.error(`[API] Error ${res.status}:`, data);
-            throw new Error(data.detail || `HTTP ${res.status}`);
+        let lastError = null;
+        for (let attempt = 1; attempt <= API_RETRIES; attempt++) {
+          try {
+            const res = await fetch(url, { ...opts, headers });
+            const txt = await res.text();
+            let data;
+            try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+            if (!res.ok) {
+              lastError = new Error(data.detail || `HTTP ${res.status}`);
+              if (res.status >= 500 && attempt < API_RETRIES) {
+                await new Promise((r) => setTimeout(r, API_RETRY_DELAY_MS));
+                continue;
+              }
+              throw lastError;
+            }
+            return data;
+          } catch (e) {
+            lastError = e;
+            const isRetryable = e.message === "Failed to fetch" || e.message.includes("NetworkError") || e.message.includes("Load failed");
+            if (isRetryable && attempt < API_RETRIES) {
+              await new Promise((r) => setTimeout(r, API_RETRY_DELAY_MS));
+              continue;
+            }
+            throw e;
           }
-          console.log(`[API] Success:`, data);
-          return data;
-        } catch (e) {
-          console.error(`[API] Fetch failed:`, e.message, `URL: ${url}`);
-          throw e;
         }
+        throw lastError;
       }
 
       function renderProfile(me) {
@@ -185,38 +199,40 @@
         });
       }
 
+      function setSectionError(elId, message) {
+        const el = document.getElementById(elId);
+        if (el) el.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${message}</div>`;
+      }
+
       async function loadData() {
+        const profileEl = document.getElementById("profile");
+        const balancesEl = document.getElementById("balances");
+        const marketsEl = document.getElementById("markets");
+
         try {
-          console.log("[loadData] Loading profile...");
           const me = await api("/me");
           renderProfile(me);
         } catch (e) {
-          console.error("[loadData] Failed to load profile:", e);
-          throw e;
+          if (profileEl) setSectionError("profile", e.message);
         }
 
         try {
-          console.log("[loadData] Loading balances...");
           const balances = await api("/me/balances");
           renderBalances(balances);
         } catch (e) {
-          console.error("[loadData] Failed to load balances:", e);
-          throw e;
+          if (balancesEl) setSectionError("balances", e.message);
         }
 
         try {
-          console.log("[loadData] Loading markets...");
           const markets = await api("/markets");
           renderMarkets(markets);
         } catch (e) {
-          console.error("[loadData] Failed to load markets:", e);
-          throw e;
+          if (marketsEl) setSectionError("markets", e.message);
         }
       }
 
       async function autoAuth() {
         const statusEl = document.getElementById("status");
-        console.log("[autoAuth] Starting auth, API_BASE:", API_BASE, "hostname:", location.hostname);
         try {
           const tg = window.Telegram?.WebApp;
           if (!tg) throw new Error("Открой Mini App внутри Telegram.");
@@ -225,35 +241,15 @@
           if (!initData) throw new Error("initData пустой.");
 
           statusEl.textContent = "Авторизация через Telegram…";
-          console.log("[autoAuth] Calling /auth/telegram...");
           const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
           token = out.token;
           statusEl.textContent = `Авторизация успешна, user_id=${out.user.id}`;
-          
-          // Показываем основной экран сразу после авторизации
+
           loadingScreen.classList.add("hidden");
           appRoot.classList.remove("hidden");
-          
-          // Загружаем данные отдельно (если упадёт - покажем ошибки в секциях)
-          try {
-            await loadData();
-          } catch (e) {
-            console.error("Failed to load data:", e);
-            // Показываем ошибки в соответствующих секциях
-            const profileEl = document.getElementById("profile");
-            const balancesEl = document.getElementById("balances");
-            const marketsEl = document.getElementById("markets");
-            
-            if (profileEl && !profileEl.innerHTML) {
-              profileEl.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${e.message}</div>`;
-            }
-            if (balancesEl && !balancesEl.innerHTML) {
-              balancesEl.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${e.message}</div>`;
-            }
-            if (marketsEl && !marketsEl.innerHTML) {
-              marketsEl.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${e.message}</div>`;
-            }
-          }
+
+          await new Promise((r) => setTimeout(r, 400));
+          await loadData();
         } catch (e) {
           statusEl.textContent = `Ошибка авторизации: ${e.message}`;
         }
