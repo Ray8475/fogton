@@ -15,7 +15,10 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiohttp import web
 from dotenv import load_dotenv
 
+from .logging import setup_logging, get_logger
+
 load_dotenv()
+setup_logging()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "")
@@ -40,6 +43,8 @@ dp = Dispatcher()
 # Текущий webhook URL для отслеживания изменений
 _current_webhook_url: str | None = None
 
+logger = get_logger("bot.main")
+
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message) -> None:
@@ -57,6 +62,7 @@ async def cmd_start(message: Message) -> None:
 
 
 async def run_polling() -> None:
+    logger.info("Starting bot in polling mode", extra={"event": "polling_started"})
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
@@ -155,7 +161,10 @@ async def update_webhook_if_changed() -> bool:
     
     # Валидация URL перед установкой
     if not validate_webhook_url(new_url):
-        print(f"Warning: Invalid webhook URL format: {new_url}")
+        logger.warning(
+            "Invalid webhook URL format",
+            extra={"event": "webhook_url_invalid", "webhook_url": new_url},
+        )
         return False
     
     if new_url != _current_webhook_url:
@@ -165,11 +174,18 @@ async def update_webhook_if_changed() -> bool:
                 secret_token=WEBHOOK_SECRET or None,
                 drop_pending_updates=False,  # Не сбрасывать апдейты при обновлении
             )
-            print(f"Webhook URL updated: {new_url}")
+            logger.info(
+                "Webhook URL updated",
+                extra={"event": "webhook_updated", "webhook_url": new_url},
+            )
             _current_webhook_url = new_url
             return True
-        except Exception as e:
-            print(f"Error updating webhook: {e}")
+        except Exception:
+            logger.error(
+                "Error updating webhook",
+                exc_info=True,
+                extra={"event": "webhook_update_error", "webhook_url": new_url},
+            )
             return False
     
     return False
@@ -204,10 +220,16 @@ async def run_webhook() -> None:
     await runner.setup()
     site = web.TCPSite(runner, host="0.0.0.0", port=8081)
     await site.start()
-    print(f"Listening on port 8081 (ready for tunnel)")
+    logger.info(
+        "Listening on port 8081 (ready for tunnel)",
+        extra={"event": "webhook_server_started"},
+    )
     
     # Теперь регистрируем webhook в Telegram — к этому моменту мы уже принимаем запросы
-    print(f"Setting webhook to: {webhook_url}")
+    logger.info(
+        "Setting webhook",
+        extra={"event": "webhook_set", "webhook_url": webhook_url},
+    )
 
     # Telegram может какое-то время не резолвить домен (кэш DNS/NXDOMAIN на их стороне).
     # В этом случае не падаем, а повторяем set_webhook() каждые N секунд до успеха.
@@ -218,17 +240,19 @@ async def run_webhook() -> None:
                 secret_token=WEBHOOK_SECRET or None,
                 drop_pending_updates=True,
             )
-            print(f"Bot started with webhook: {webhook_url}")
+            logger.info(
+                "Bot started with webhook",
+                extra={"event": "webhook_set_ok", "webhook_url": webhook_url},
+            )
             break
         except Exception as e:
             msg = str(e)
-            print(f"ERROR: Failed to set webhook: {e}")
-            print(f"URL was: {webhook_url}")
+            logger.error(
+                "Failed to set webhook, will retry",
+                exc_info=True,
+                extra={"event": "webhook_set_error", "webhook_url": webhook_url},
+            )
             if "Failed to resolve host" in msg or "Name or service not known" in msg:
-                print(
-                    f"Will retry set_webhook() in {WEBHOOK_SET_RETRY_SECONDS}s "
-                    f"(set WEBHOOK_SET_RETRY_SECONDS to change)."
-                )
                 await asyncio.sleep(WEBHOOK_SET_RETRY_SECONDS)
                 continue
             raise
