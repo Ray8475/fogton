@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gifts Futures MVP</title>
+    <link rel="preconnect" href="https://api.fogton.ru" crossorigin />
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+    <link rel="preconnect" href="https://telegram.org" crossorigin />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -145,7 +148,7 @@
       let token = null;
 
       const API_RETRIES = 3;
-      const API_RETRY_DELAY_MS = 600;
+      const API_RETRY_DELAY_MS = 400;
 
       async function api(path, opts = {}) {
         const headers = Object.assign({}, opts.headers || {});
@@ -278,29 +281,20 @@
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
 
-        try {
-          const me = await api("/me");
-          renderProfile(me);
-        } catch (e) {
-          const msg = e.message || "Не удалось загрузить";
-          if (profileEl) setSectionError("profile", msg);
-        }
+        const [meRes, balancesRes, marketsRes] = await Promise.allSettled([
+          api("/me"),
+          api("/me/balances"),
+          api("/markets"),
+        ]);
 
-        try {
-          const balances = await api("/me/balances");
-          renderBalances(balances);
-        } catch (e) {
-          const msg = e.message || "Не удалось загрузить";
-          if (balancesEl) setSectionError("balances", msg);
-        }
+        if (meRes.status === "fulfilled") renderProfile(meRes.value);
+        else if (profileEl) setSectionError("profile", meRes.reason?.message || "Не удалось загрузить");
 
-        try {
-          const markets = await api("/markets");
-          renderMarkets(markets);
-        } catch (e) {
-          const msg = e.message || "Не удалось загрузить";
-          if (marketsEl) setSectionError("markets", msg);
-        }
+        if (balancesRes.status === "fulfilled") renderBalances(balancesRes.value);
+        else if (balancesEl) setSectionError("balances", balancesRes.reason?.message || "Не удалось загрузить");
+
+        if (marketsRes.status === "fulfilled") renderMarkets(marketsRes.value);
+        else if (marketsEl) setSectionError("markets", marketsRes.reason?.message || "Не удалось загрузить");
       }
 
       async function autoAuth() {
@@ -319,14 +313,8 @@
           
           loadingScreen.classList.add("hidden");
           appRoot.classList.remove("hidden");
-          
-          await new Promise((r) => setTimeout(r, 300));
-          
-          try {
-            await loadData();
-          } catch (e) {
-            console.error("[autoAuth] loadData failed:", e);
-          }
+
+          loadData();
         } catch (e) {
           statusEl.textContent = `Ошибка авторизации: ${e.message}`;
           statusEl.classList.add("tg-hint");
