@@ -63,6 +63,12 @@
       .nav-tab.active {
         color: var(--button-color);
       }
+      .nav-tab.active img {
+        opacity: 1;
+      }
+      .nav-tab:not(.active) img {
+        opacity: 0.65;
+      }
     </style>
   </head>
   <body>
@@ -133,14 +139,14 @@
     <!-- Нижняя навигация -->
     <nav id="bottomNav" class="fixed bottom-0 left-0 right-0 hidden max-w-xl mx-auto border-t tg-card" style="border-color: var(--header-bg-color);">
       <div class="flex">
-        <button type="button" data-tab="home" class="nav-tab flex-1 py-3 text-sm font-medium tg-text hover:opacity-90 transition-opacity">
-          Главная
+        <button type="button" data-tab="home" class="nav-tab flex-1 py-3 flex flex-col items-center justify-center gap-0.5 hover:opacity-90 transition-opacity" aria-label="Главная">
+          <img src="images/home.png" alt="" class="w-6 h-6 object-contain" />
         </button>
-        <button type="button" data-tab="profile" class="nav-tab flex-1 py-3 text-sm font-medium tg-text hover:opacity-90 transition-opacity">
-          Профиль
+        <button type="button" data-tab="profile" class="nav-tab flex-1 py-3 flex flex-col items-center justify-center gap-0.5 hover:opacity-90 transition-opacity" aria-label="Профиль">
+          <img src="images/profile.png" alt="" class="w-6 h-6 object-contain" />
         </button>
-        <button type="button" data-tab="wallet" class="nav-tab flex-1 py-3 text-sm font-medium tg-text hover:opacity-90 transition-opacity">
-          Кошелёк
+        <button type="button" data-tab="wallet" class="nav-tab flex-1 py-3 flex flex-col items-center justify-center gap-0.5 hover:opacity-90 transition-opacity" aria-label="Кошелёк">
+          <img src="images/wallet.png" alt="" class="w-6 h-6 object-contain" />
         </button>
       </div>
     </nav>
