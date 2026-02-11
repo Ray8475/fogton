@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Ссылка для возврата в Mini App после подключения кошелька (замените на ваш бот: https://t.me/YourBotName) -->
+    <meta name="tonconnect-twa-return-url" content="https://t.me/fogton_bot" />
     <title>Gifts Futures MVP</title>
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
     <link rel="preconnect" href="https://telegram.org" crossorigin />
@@ -314,10 +316,14 @@
       function initTonConnect() {
         if (typeof TON_CONNECT_UI === "undefined" || tonConnectUI) return;
         const manifestUrl = location.origin + "/tonconnect-manifest.json";
+        const twaReturnMeta = document.querySelector('meta[name="tonconnect-twa-return-url"]');
+        const twaReturnUrl = twaReturnMeta ? (twaReturnMeta.getAttribute("content") || "").trim() : "";
+        const uiOpts = { language: "ru" };
+        if (twaReturnUrl) uiOpts.twaReturnUrl = twaReturnUrl;
         tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
           manifestUrl,
           buttonRootId: "ton-connect-btn",
-          uiOptions: { language: "ru" },
+          uiOptions: uiOpts,
         });
         tonConnectUI.onStatusChange((data) => {
           if (data && data.account && token) {
