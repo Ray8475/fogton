@@ -8,6 +8,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from sqlalchemy import text
+
+from app.core.settings import settings
 from app.db.database import Base, engine
 from app.db import models  # noqa: F401 — регистрация таблиц в Base.metadata
 from app.routes.health import router as health_router
@@ -39,6 +42,15 @@ def create_app() -> FastAPI:
     )
 
     Base.metadata.create_all(bind=engine)
+
+    # Добавить колонку connected_ton_address в существующие БД (миграция без Alembic)
+    if "sqlite" in (settings.database_url or ""):
+        with engine.connect() as conn:
+            r = conn.execute(text("PRAGMA table_info(users)"))
+            columns = [row[1] for row in r.fetchall()]
+            if "connected_ton_address" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN connected_ton_address VARCHAR(68) NULL"))
+                conn.commit()
 
     app.include_router(health_router)
     # Онбординг Mini App: auth + /me + markets
