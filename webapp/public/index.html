@@ -198,11 +198,31 @@
           const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
           token = out.token;
           statusEl.textContent = `Авторизация успешна, user_id=${out.user.id}`;
-          await loadData();
-
-          // показываем основной экран
+          
+          // Показываем основной экран сразу после авторизации
           loadingScreen.classList.add("hidden");
           appRoot.classList.remove("hidden");
+          
+          // Загружаем данные отдельно (если упадёт - покажем ошибки в секциях)
+          try {
+            await loadData();
+          } catch (e) {
+            console.error("Failed to load data:", e);
+            // Показываем ошибки в соответствующих секциях
+            const profileEl = document.getElementById("profile");
+            const balancesEl = document.getElementById("balances");
+            const marketsEl = document.getElementById("markets");
+            
+            if (profileEl && !profileEl.innerHTML) {
+              profileEl.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${e.message}</div>`;
+            }
+            if (balancesEl && !balancesEl.innerHTML) {
+              balancesEl.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${e.message}</div>`;
+            }
+            if (marketsEl && !marketsEl.innerHTML) {
+              marketsEl.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${e.message}</div>`;
+            }
+          }
         } catch (e) {
           statusEl.textContent = `Ошибка авторизации: ${e.message}`;
         }
