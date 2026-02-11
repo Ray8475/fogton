@@ -57,6 +57,7 @@ CURRENCY_LEN = 8  # "TON" | "USDT"
 
 class Balance(Base):
     __tablename__ = "balances"
+    __table_args__ = (UniqueConstraint("user_id", "currency", name="uq_balances_user_currency"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

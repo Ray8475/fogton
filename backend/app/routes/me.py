@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.settings import settings
 from app.core.jwt import decode_jwt
 from app.db.database import get_db
-from app.db.models import User
+from app.db.models import Balance, User
 
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -49,15 +49,18 @@ def get_me(
 
 
 @router.get("/balances")
-def my_balances(user_id: int = Depends(require_user_id)):
-    # MVP stub: will be backed by balances/ledger later
-    return {
-        "user_id": user_id,
-        "balances": [
-            {"currency": "TON", "available": "0"},
-            {"currency": "USDT", "available": "0"},
-        ],
-    }
+def my_balances(
+    user_id: int = Depends(require_user_id),
+    db: Session = Depends(get_db),
+):
+    """Балансы пользователя из БД (обновляются при зачислении депозитов через TON webhook)."""
+    rows = db.query(Balance).filter(Balance.user_id == user_id).all()
+    by_currency = {r.currency: str(r.available) for r in rows}
+    balances = [
+        {"currency": "TON", "available": by_currency.get("TON", "0")},
+        {"currency": "USDT", "available": by_currency.get("USDT", "0")},
+    ]
+    return {"user_id": user_id, "balances": balances}
 
 
 class DepositInstructionOut(BaseModel):

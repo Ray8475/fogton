@@ -12,7 +12,7 @@
 | 2. API: healthz и запуск | ✅ Готово | 2025-01-29 | Минимальный main.py, только health |
 | 3. Онбординг: Mini App + auth + /me | ✅ Готово | 2026-02-12 | Mini App: auth, /me, профиль, балансы, рынки, нижняя навигация |
 | 4. Рынки и инструкция депозита | ✅ Готово | 2026-02-12 | GET /markets из БД, GET /me/deposit-instruction, блок «Пополнить» в Mini App |
-| 5. Депозит: TON webhook и зачисление | ⏳ Pending | — | |
+| 5. Депозит: TON webhook и зачисление | ✅ Готово | 2026-02-12 | POST /ton/webhook, GET /me/balances из БД, deposits/ledger/balances |
 | 6. Вывод (заявка и статус) | ⏳ Pending | — | |
 | 7. Админ: рынки и корректировка баланса | ⏳ Pending | — | |
 
@@ -69,11 +69,11 @@
 
 **Цель:** При получении webhook от TON API — валидация, атрибуция по comment, запись в deposits/ledger_entries, увеличение balances. Проверка: отправить тестовый webhook (или симуляцию) с comment пользователя → баланс пользователя увеличился.
 
-- [ ] API: POST /ton/webhook — приём payload (tx_hash, amount, comment, currency и т.д.), проверка секрета
-- [ ] По comment найти user_id; идемпотентность по tx_hash (не дублировать депозит)
-- [ ] Создать запись в deposits (status credited), запись в ledger_entries, обновить balances.available
-- [ ] API: GET /me или GET /me/balances — возвращать балансы пользователя
-- [ ] Mini App: показывать балансы (TON, USDT)
+- [x] API: POST /ton/webhook — приём payload (tx_hash, amount, comment, currency и т.д.), проверка секрета
+- [x] По comment найти user_id; идемпотентность по tx_hash (не дублировать депозит)
+- [x] Создать запись в deposits (status credited), запись в ledger_entries, обновить balances.available
+- [x] API: GET /me или GET /me/balances — возвращать балансы пользователя
+- [x] Mini App: показывать балансы (TON, USDT)
 - [ ] **Тест:** webhook с comment пользователя → в приложении отображается обновлённый баланс
 
 ---

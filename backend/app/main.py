@@ -17,6 +17,7 @@ from app.routes.health import router as health_router
 from app.routes.auth import router as auth_router
 from app.routes.me import router as me_router
 from app.routes.markets import router as markets_router
+from app.routes.ton_webhook import router as ton_webhook_router
 
 
 class KeepAliveMiddleware(BaseHTTPMiddleware):
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(me_router)
     app.include_router(markets_router)
+    app.include_router(ton_webhook_router)
     return app
 
 
