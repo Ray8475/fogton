@@ -79,17 +79,23 @@
     <!-- Экран загрузки -->
     <div id="loadingScreen" class="min-h-screen flex items-center justify-center p-4">
       <div class="loading-card">
-        <div class="loading-spinner" aria-hidden="true"></div>
+        <div id="loadingSpinner" class="loading-spinner" aria-hidden="true"></div>
         <h1 class="text-lg font-semibold tg-text mb-1">Gifts Futures</h1>
-        <p class="text-sm tg-hint" id="status">Загрузка…</p>
+        <p class="text-sm tg-hint mb-3" id="status">Загрузка…</p>
+        <button id="btnRetry" type="button" class="hidden rounded-lg px-4 py-2 text-sm font-medium tg-btn">Повторить</button>
       </div>
     </div>
 
     <!-- Основной экран после успешной авторизации -->
     <div id="appRoot" class="max-w-xl mx-auto p-4 space-y-4 hidden">
-      <div class="rounded-xl p-4 tg-card">
-        <h1 class="text-xl font-semibold tg-text">Gifts Futures (MVP)</h1>
-        <p class="text-sm tg-hint">Авторизация выполнена, данные загружены с API.</p>
+      <div class="rounded-xl p-4 tg-card flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h1 class="text-xl font-semibold tg-text">Gifts Futures (MVP)</h1>
+            <p class="text-sm tg-hint">Данные загружены с API.</p>
+          </div>
+          <button id="btnRefreshData" type="button" class="rounded-lg px-3 py-1.5 text-xs tg-btn shrink-0">Обновить</button>
+        </div>
       </div>
 
       <div class="rounded-xl p-4 space-y-3 tg-card">
@@ -169,8 +175,8 @@
       let token = null;
 
       const API_RETRIES = 4;
-      const API_RETRY_DELAY_MS = 800;
-      const API_TIMEOUT_MS = 20000;
+      const API_RETRY_DELAY_MS = 1000;
+      const API_TIMEOUT_MS = 35000;
 
       async function api(path, opts = {}) {
         const headers = Object.assign({}, opts.headers || {});
@@ -349,9 +355,32 @@
             : `Ошибка: ${e.message}`;
           statusEl.textContent = msg;
           statusEl.classList.add("tg-hint");
+          document.getElementById("loadingSpinner").classList.add("hidden");
+          document.getElementById("btnRetry").classList.remove("hidden");
           console.error("[autoAuth] Error:", e);
         }
       }
+
+      document.getElementById("btnRefreshData").addEventListener("click", () => {
+        const profileEl = document.getElementById("profile");
+        const balancesEl = document.getElementById("balances");
+        const marketsEl = document.getElementById("markets");
+        if (profileEl) profileEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
+        if (balancesEl) balancesEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
+        if (marketsEl) marketsEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
+        loadData();
+      });
+
+      document.getElementById("btnRetry").addEventListener("click", () => {
+        const statusEl = document.getElementById("status");
+        const spinner = document.getElementById("loadingSpinner");
+        const btnRetry = document.getElementById("btnRetry");
+        statusEl.textContent = "Загрузка…";
+        statusEl.classList.remove("tg-hint");
+        spinner.classList.remove("hidden");
+        btnRetry.classList.add("hidden");
+        autoAuth();
+      });
 
       window.addEventListener("load", () => {
         autoAuth();
