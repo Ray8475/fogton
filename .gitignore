@@ -3,4 +3,18 @@ backend/app.db
 logs/
 __pycache__/
 *.pyc
+.webhook_url
 
+# локальные настройки/IDE
+.cursor/
+.vscode/
+*.code-workspace
+
+# виртуальные окружения Python
+.venv/
+venv/
+
+# прочие временные файлы
+*.log
+*.tmp
+*.swp

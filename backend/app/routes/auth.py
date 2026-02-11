@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.db.database import Base
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger("api")
 
 
 class TelegramAuthIn(BaseModel):
@@ -32,6 +34,7 @@ def auth_telegram(payload: TelegramAuthIn, db: Session = Depends(get_db)):
     try:
         parsed = verify_telegram_webapp_init_data(payload.init_data, settings.bot_token)
     except ValueError as e:
+        logger.warning("Auth failed: initData validation error", extra={"event": "auth_failed", "detail": str(e)})
         raise HTTPException(status_code=401, detail=str(e))
 
     raw_user = parsed.get("user")
@@ -55,5 +58,9 @@ def auth_telegram(payload: TelegramAuthIn, db: Session = Depends(get_db)):
         db.refresh(user)
 
     token = issue_jwt(subject=str(user.id), secret=settings.jwt_secret, ttl_seconds=settings.jwt_ttl_seconds)
+    logger.info(
+        "Auth success",
+        extra={"event": "auth_success", "telegram_user_id": user.telegram_user_id},
+    )
     return {"token": token, "user": {"id": user.id, "telegram_user_id": user.telegram_user_id}}
 

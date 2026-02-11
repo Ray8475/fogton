@@ -48,7 +48,8 @@ if (-not $NoWeb) {
 }
 
 if (-not $NoTunnel) {
-    Write-Host "Starting Cloudflare Tunnel (http://localhost:5500) in background..." -ForegroundColor Green
+    # Опционально для локальной отладки; продакшен-деплой — через GitHub (см. vision.md)
+    Write-Host "Starting tunnel (cloudflared, http://localhost:5500) in background..." -ForegroundColor Green
     $tunnelLog = Join-Path $RunDir "tunnel.log"
     $cloudflaredPath = Join-Path $Root "cloudflared.exe"
     if (-not (Test-Path $cloudflaredPath)) {
