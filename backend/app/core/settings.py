@@ -16,6 +16,7 @@ class Settings(BaseModel):
     admin_token: str = os.getenv("ADMIN_TOKEN", "")
 
     ton_webhook_secret: str = os.getenv("TON_WEBHOOK_SECRET", "")
+    deposit_wallet_address: str = os.getenv("TON_PROJECT_WALLET_ADDRESS", "")
 
 
 settings = Settings()

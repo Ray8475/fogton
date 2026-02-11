@@ -10,8 +10,8 @@
 |----------|--------|------|------------|
 | 1. Бот: /start и кнопка | ✅ Готово | 2025-01-29 | Код в bot/app/main.py |
 | 2. API: healthz и запуск | ✅ Готово | 2025-01-29 | Минимальный main.py, только health |
-| 3. Онбординг: Mini App + auth + /me | ⏳ Pending | — | |
-| 4. Рынки и инструкция депозита | ⏳ Pending | — | |
+| 3. Онбординг: Mini App + auth + /me | ✅ Готово | 2026-02-12 | Mini App: auth, /me, профиль, балансы, рынки, нижняя навигация |
+| 4. Рынки и инструкция депозита | ✅ Готово | 2026-02-12 | GET /markets из БД, GET /me/deposit-instruction, блок «Пополнить» в Mini App |
 | 5. Депозит: TON webhook и зачисление | ⏳ Pending | — | |
 | 6. Вывод (заявка и статус) | ⏳ Pending | — | |
 | 7. Админ: рынки и корректировка баланса | ⏳ Pending | — | |
@@ -46,10 +46,10 @@
 
 **Цель:** Открыть Mini App из бота, авторизоваться (initData → JWT), получить данные пользователя. Проверка: нажать кнопку в боте → открывается Mini App → запрос auth → запрос /me → отображается свой user.
 
-- [ ] Mini App (webapp): одна страница, при открытии читает initData из Telegram WebApp, шлёт POST /auth/telegram с init_data
-- [ ] API: POST /auth/telegram — проверка подписи initData, создание/поиск user, выдача JWT
-- [ ] API: GET /me — по JWT возвращает текущего user (id, telegram_user_id)
-- [ ] Mini App: сохраняет JWT, вызывает GET /me с Authorization: Bearer &lt;jwt&gt;, выводит данные user
+- [x] Mini App (webapp): одна страница, при открытии читает initData из Telegram WebApp, шлёт POST /auth/telegram с init_data
+- [x] API: POST /auth/telegram — проверка подписи initData, создание/поиск user, выдача JWT
+- [x] API: GET /me — по JWT возвращает текущего user (id, telegram_user_id)
+- [x] Mini App: сохраняет JWT, вызывает GET /me с Authorization: Bearer &lt;jwt&gt;, выводит данные user
 - [ ] **Тест:** бот → «Открыть приложение» → в приложении виден свой профиль (или «Вы вошли»)
 
 ---
@@ -58,9 +58,9 @@
 
 **Цель:** В Mini App показывать список рынков и инструкцию по депозиту (адрес + comment). Проверка: в приложении виден список рынков и блок «Пополнить» с адресом и comment.
 
-- [ ] API: GET /markets — список активных рынков (gift, expiry); данные из справочников (gifts, expiries, markets)
-- [ ] API: GET /me/deposit-instruction — по JWT возвращает адрес кошелька проекта и уникальный comment (payload) для пользователя
-- [ ] Mini App: экран/блок рынков (список); экран/блок «Пополнить» с адресом и comment для копирования
+- [x] API: GET /markets — список активных рынков (gift, expiry); данные из справочников (gifts, expiries, markets)
+- [x] API: GET /me/deposit-instruction — по JWT возвращает адрес кошелька проекта и уникальный comment (payload) для пользователя
+- [x] Mini App: экран/блок рынков (список); экран/блок «Пополнить» с адресом и comment для копирования
 - [ ] **Тест:** в приложении видны рынки и инструкция депозита с уникальным comment
 
 ---

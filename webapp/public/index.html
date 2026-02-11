@@ -133,6 +133,13 @@
             <div class="text-xs tg-hint">Загрузка...</div>
           </div>
         </div>
+        <div class="rounded-xl p-4 space-y-3 tg-card mt-4">
+          <h2 class="font-semibold tg-text">Пополнить</h2>
+          <p class="text-xs tg-hint">Переведите TON или USDT на адрес проекта с указанным комментарием.</p>
+          <div id="depositInstruction" class="text-sm space-y-2 tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -312,13 +319,14 @@
           const activeBadge = m.active === false ?
             `<span class="text-[11px] px-2 py-0.5 rounded-full tg-hint" style="background: var(--header-bg-color);">неактивен</span>` :
             `<span class="text-[11px] px-2 py-0.5 rounded-full" style="background: rgba(16, 185, 129, 0.2); color: rgb(110, 231, 183);">активен</span>`;
-          title.innerHTML = `<span class="font-medium tg-text">${m.name || m.symbol || "Маркет"}</span>${activeBadge}`;
+          title.innerHTML = `<span class="font-medium tg-text">${m.gift || m.name || m.symbol || "Маркет"}</span>${activeBadge}`;
 
           const meta = document.createElement("div");
           meta.className = "text-[11px] tg-hint";
           const base = m.base || m.base_currency || "";
           const quote = m.quote || m.quote_currency || "";
-          meta.textContent = base && quote ? `${base}/${quote}` : m.description || "";
+          const expiryDays = m.expiry_days != null ? m.expiry_days : "";
+          meta.textContent = base && quote ? `${base}/${quote}` : (expiryDays !== "" ? `Экспирация: ${expiryDays} дн.` : (m.description || ""));
 
           card.appendChild(title);
           card.appendChild(meta);
@@ -333,15 +341,64 @@
         }
       }
 
+      function renderDepositInstruction(data) {
+        const el = document.getElementById("depositInstruction");
+        if (!el) return;
+        const address = (data && data.address) || "";
+        const comment = (data && data.comment) || "";
+        if (!address) {
+          el.innerHTML = "<div class=\"text-xs tg-hint\">Адрес пополнения не настроен.</div>";
+          return;
+        }
+        el.innerHTML = "";
+        const addrRow = document.createElement("div");
+        addrRow.className = "space-y-1";
+        addrRow.innerHTML = "<span class=\"text-xs tg-hint\">Адрес:</span>";
+        const addrPre = document.createElement("div");
+        addrPre.className = "break-all text-xs font-mono tg-text py-1 px-2 rounded-lg";
+        addrPre.style.background = "var(--bg-color)";
+        addrPre.textContent = address;
+        const addrBtn = document.createElement("button");
+        addrBtn.type = "button";
+        addrBtn.className = "mt-1 rounded-lg px-3 py-1 text-xs tg-btn";
+        addrBtn.textContent = "Копировать адрес";
+        addrBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(address).then(() => { addrBtn.textContent = "Скопировано"; setTimeout(() => { addrBtn.textContent = "Копировать адрес"; }, 1500); });
+        });
+        addrRow.appendChild(addrPre);
+        addrRow.appendChild(addrBtn);
+        el.appendChild(addrRow);
+
+        const commentRow = document.createElement("div");
+        commentRow.className = "space-y-1 mt-3";
+        commentRow.innerHTML = "<span class=\"text-xs tg-hint\">Комментарий (обязательно):</span>";
+        const commentPre = document.createElement("div");
+        commentPre.className = "break-all text-xs font-mono tg-text py-1 px-2 rounded-lg";
+        commentPre.style.background = "var(--bg-color)";
+        commentPre.textContent = comment;
+        const commentBtn = document.createElement("button");
+        commentBtn.type = "button";
+        commentBtn.className = "mt-1 rounded-lg px-3 py-1 text-xs tg-btn";
+        commentBtn.textContent = "Копировать комментарий";
+        commentBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(comment).then(() => { commentBtn.textContent = "Скопировано"; setTimeout(() => { commentBtn.textContent = "Копировать комментарий"; }, 1500); });
+        });
+        commentRow.appendChild(commentPre);
+        commentRow.appendChild(commentBtn);
+        el.appendChild(commentRow);
+      }
+
       async function loadData() {
         const profileEl = document.getElementById("profile");
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
+        const depositEl = document.getElementById("depositInstruction");
 
-        const [meResult, balancesResult, marketsResult] = await Promise.allSettled([
+        const [meResult, balancesResult, marketsResult, depositResult] = await Promise.allSettled([
           api("/me"),
           api("/me/balances"),
           api("/markets"),
+          api("/me/deposit-instruction"),
         ]);
 
         if (meResult.status === "fulfilled") {
@@ -358,6 +415,11 @@
           renderMarkets(marketsResult.value);
         } else if (marketsEl) {
           setSectionError("markets", marketsResult.reason?.message || "Не удалось загрузить");
+        }
+        if (depositResult.status === "fulfilled") {
+          renderDepositInstruction(depositResult.value);
+        } else if (depositEl) {
+          setSectionError("depositInstruction", depositResult.reason?.message || "Не удалось загрузить");
         }
       }
 
@@ -396,9 +458,11 @@
         const profileEl = document.getElementById("profile");
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
+        const depositEl = document.getElementById("depositInstruction");
         if (profileEl) profileEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
         if (balancesEl) balancesEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
         if (marketsEl) marketsEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
+        if (depositEl) depositEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
         loadData();
       });
 

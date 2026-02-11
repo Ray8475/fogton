@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import String, DateTime, Integer, Boolean, Numeric, UniqueConstraint, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
 
@@ -44,6 +44,9 @@ class Market(Base):
     gift_id: Mapped[int] = mapped_column(ForeignKey("gifts.id"), nullable=False)
     expiry_id: Mapped[int] = mapped_column(ForeignKey("expiries.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    gift: Mapped["Gift"] = relationship("Gift", foreign_keys=[gift_id])
+    expiry: Mapped["Expiry"] = relationship("Expiry", foreign_keys=[expiry_id])
 
 
 # --- Балансы и операции (денежный учёт) ---

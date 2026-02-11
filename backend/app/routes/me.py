@@ -47,3 +47,18 @@ def my_balances(user_id: int = Depends(require_user_id)):
         ],
     }
 
+
+class DepositInstructionOut(BaseModel):
+    address: str
+    comment: str
+
+
+@router.get("/deposit-instruction", response_model=DepositInstructionOut)
+def deposit_instruction(
+    user_id: int = Depends(require_user_id),
+) -> DepositInstructionOut:
+    """Адрес кошелька проекта и уникальный comment для атрибуции депозита (vision: один кошелёк + comment)."""
+    address = settings.deposit_wallet_address or ""
+    comment = f"u{user_id}"
+    return DepositInstructionOut(address=address, comment=comment)
+
