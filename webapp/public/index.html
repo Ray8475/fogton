@@ -201,10 +201,27 @@
             try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
             if (!res.ok) {
               lastError = new Error(data.detail || `HTTP ${res.status}`);
+              if (res.status === 401 && path !== "/auth/telegram" && tg?.initData && !opts._retriedSession) {
+                try {
+                  const authRes = await fetch(`${API_BASE}/auth/telegram`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ init_data: tg.initData }),
+                  });
+                  clearTimeout(timeoutId);
+                  if (authRes.ok) {
+                    const authData = await authRes.json();
+                    token = authData.token;
+                    return api(path, { ...opts, _retriedSession: true });
+                  }
+                } catch (_) {}
+                clearTimeout(timeoutId);
+              }
               if (res.status >= 500 && attempt < API_RETRIES) {
                 await new Promise((r) => setTimeout(r, API_RETRY_DELAY_MS));
                 continue;
               }
+              if (res.status === 401) lastError = new Error("Сессия истекла. Откройте приложение снова.");
               throw lastError;
             }
             return data;
