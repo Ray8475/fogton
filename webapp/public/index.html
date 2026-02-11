@@ -6,57 +6,87 @@
     <title>Gifts Futures MVP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+      :root {
+        --bg-color: var(--tg-theme-bg-color, #0f172a);
+        --text-color: var(--tg-theme-text-color, #f1f5f9);
+        --hint-color: var(--tg-theme-hint-color, #94a3b8);
+        --secondary-bg-color: var(--tg-theme-secondary-bg-color, #1e293b);
+        --button-color: var(--tg-theme-button-color, #3b82f6);
+        --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+        --link-color: var(--tg-theme-link-color, #60a5fa);
+        --header-bg-color: var(--tg-theme-header-bg-color, #1e293b);
+      }
+      body {
+        background: var(--bg-color);
+        color: var(--text-color);
+      }
+    </style>
   </head>
-  <body class="bg-slate-950 text-slate-100">
+  <body>
+    <!-- Предупреждение, если открыто не в Telegram -->
+    <div id="notInTelegram" class="min-h-screen flex items-center justify-center hidden" style="background: var(--bg-color); color: var(--text-color);">
+      <div class="max-w-xs w-full rounded-2xl px-6 py-5 space-y-3 text-center" style="background: var(--secondary-bg-color);">
+        <img src="https://telegram.org/img/t_logo.png" alt="Telegram" style="width: 80px; height: 80px; margin: 0 auto;">
+        <div class="text-sm font-semibold" style="color: var(--text-color);">Упс!</div>
+        <div class="text-xs" style="color: var(--hint-color);">
+          Это приложение должно быть запущено <strong>внутри Telegram!</strong>
+        </div>
+        <div class="text-xs" style="color: var(--hint-color);">
+          Откройте Mini App через кнопку в боте.
+        </div>
+      </div>
+    </div>
+
     <!-- Экран загрузки -->
-    <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
-      <div class="max-w-xs w-full rounded-2xl bg-slate-900 border border-slate-800 px-6 py-5 space-y-3 text-center">
-        <div class="text-sm font-semibold text-slate-200">Gifts Futures (MVP)</div>
-        <div class="text-xs text-slate-400">
+    <div id="loadingScreen" class="min-h-screen flex items-center justify-center" style="background: var(--bg-color);">
+      <div class="max-w-xs w-full rounded-2xl px-6 py-5 space-y-3 text-center" style="background: var(--secondary-bg-color);">
+        <div class="text-sm font-semibold" style="color: var(--text-color);">Gifts Futures (MVP)</div>
+        <div class="text-xs" style="color: var(--hint-color);">
           Авторизация через Telegram WebApp initData → JWT.
         </div>
-        <div class="text-sm text-slate-300" id="status">Запуск Mini App…</div>
+        <div class="text-sm" id="status" style="color: var(--text-color);">Запуск Mini App…</div>
       </div>
     </div>
 
     <!-- Основной экран после успешной авторизации -->
-    <div id="appRoot" class="max-w-xl mx-auto p-4 space-y-4 hidden">
-      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800">
-        <h1 class="text-xl font-semibold">Gifts Futures (MVP)</h1>
-        <p class="text-slate-300 text-sm">Авторизация выполнена, данные загружены с API.</p>
+    <div id="appRoot" class="max-w-xl mx-auto p-4 space-y-4 hidden" style="background: var(--bg-color);">
+      <div class="rounded-xl p-4" style="background: var(--secondary-bg-color);">
+        <h1 class="text-xl font-semibold" style="color: var(--text-color);">Gifts Futures (MVP)</h1>
+        <p class="text-sm" style="color: var(--hint-color);">Авторизация выполнена, данные загружены с API.</p>
       </div>
 
-      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
-        <h2 class="font-semibold">Профиль</h2>
-        <div id="profile" class="text-sm text-slate-200 space-y-1">
-          <div class="text-xs text-slate-400">Загрузка...</div>
+      <div class="rounded-xl p-4 space-y-3" style="background: var(--secondary-bg-color);">
+        <h2 class="font-semibold" style="color: var(--text-color);">Профиль</h2>
+        <div id="profile" class="text-sm space-y-1" style="color: var(--text-color);">
+          <div class="text-xs" style="color: var(--hint-color);">Загрузка...</div>
         </div>
       </div>
 
-      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
-        <h2 class="font-semibold">Баланс</h2>
-        <div id="balances" class="text-sm text-slate-200 space-y-1">
-          <div class="text-xs text-slate-400">Загрузка...</div>
+      <div class="rounded-xl p-4 space-y-3" style="background: var(--secondary-bg-color);">
+        <h2 class="font-semibold" style="color: var(--text-color);">Баланс</h2>
+        <div id="balances" class="text-sm space-y-1" style="color: var(--text-color);">
+          <div class="text-xs" style="color: var(--hint-color);">Загрузка...</div>
         </div>
       </div>
 
-      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
+      <div class="rounded-xl p-4 space-y-3" style="background: var(--secondary-bg-color);">
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold">Рынки</h2>
-          <span id="marketsBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 hidden"></span>
+          <h2 class="font-semibold" style="color: var(--text-color);">Рынки</h2>
+          <span id="marketsBadge" class="text-[11px] px-2 py-0.5 rounded-full hidden" style="background: var(--header-bg-color); color: var(--hint-color);"></span>
         </div>
-        <div id="markets" class="text-sm text-slate-200 space-y-2">
-          <div class="text-xs text-slate-400">Загрузка...</div>
+        <div id="markets" class="text-sm space-y-2" style="color: var(--text-color);">
+          <div class="text-xs" style="color: var(--hint-color);">Загрузка...</div>
         </div>
       </div>
 
-      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3 text-xs text-slate-400">
-        <div class="font-semibold text-slate-300">Настройки API (для отладки)</div>
+      <div class="rounded-xl p-4 space-y-3 text-xs" style="background: var(--secondary-bg-color); color: var(--hint-color);">
+        <div class="font-semibold" style="color: var(--text-color);">Настройки API (для отладки)</div>
         <div class="space-y-2">
-          <div><span class="font-medium text-slate-200">API:</span> <span id="apiBase"></span></div>
+          <div><span class="font-medium" style="color: var(--text-color);">API:</span> <span id="apiBase" style="color: var(--text-color);"></span></div>
           <div class="flex gap-2">
-            <input id="apiInput" class="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-1 text-xs text-slate-100" placeholder="https://api.fogton.ru" />
-            <button id="btnSaveApi" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1 text-xs">
+            <input id="apiInput" class="flex-1 rounded-lg px-3 py-1 text-xs" style="background: var(--bg-color); border: 1px solid var(--header-bg-color); color: var(--text-color);" placeholder="https://api.fogton.ru" />
+            <button id="btnSaveApi" class="rounded-lg px-3 py-1 text-xs" style="background: var(--button-color); color: var(--button-text-color);">
               Сохранить
             </button>
           </div>
@@ -77,6 +107,20 @@
       const apiInputEl = document.getElementById("apiInput");
       const loadingScreen = document.getElementById("loadingScreen");
       const appRoot = document.getElementById("appRoot");
+      const notInTelegram = document.getElementById("notInTelegram");
+      
+      const tg = window.Telegram?.WebApp;
+      
+      if (!tg || !tg.initDataUnsafe?.user) {
+        loadingScreen.classList.add("hidden");
+        appRoot.classList.add("hidden");
+        notInTelegram.classList.remove("hidden");
+        throw new Error("Mini App должен быть открыт внутри Telegram");
+      }
+      
+      tg.ready();
+      tg.expand();
+      
       apiBaseEl.textContent = API_BASE;
       apiInputEl.value = API_BASE;
 
@@ -144,7 +188,7 @@
         rows.forEach(([label, value]) => {
           const row = document.createElement("div");
           row.className = "flex justify-between items-center gap-4";
-          row.innerHTML = `<span class="text-slate-400 text-xs">${label}</span><span class="text-slate-100 text-sm font-medium">${value}</span>`;
+          row.innerHTML = `<span class="text-xs" style="color: var(--hint-color);">${label}</span><span class="text-sm font-medium" style="color: var(--text-color);">${value}</span>`;
           el.appendChild(row);
         });
       }
@@ -154,7 +198,8 @@
         el.innerHTML = "";
         if (!balances || !Array.isArray(balances.balances) || balances.balances.length === 0) {
           const empty = document.createElement("div");
-          empty.className = "text-xs text-slate-400";
+          empty.className = "text-xs";
+          empty.style.color = "var(--hint-color)";
           empty.textContent = "Пока нет балансов.";
           el.appendChild(empty);
           return;
@@ -162,7 +207,7 @@
         balances.balances.forEach((b) => {
           const row = document.createElement("div");
           row.className = "flex justify-between items-center gap-4";
-          row.innerHTML = `<span class="text-slate-300 text-sm font-medium">${b.currency}</span><span class="text-slate-100 text-sm tabular-nums">${b.available}</span>`;
+          row.innerHTML = `<span class="text-sm font-medium" style="color: var(--text-color);">${b.currency}</span><span class="text-sm tabular-nums" style="color: var(--text-color);">${b.available}</span>`;
           el.appendChild(row);
         });
       }
@@ -177,28 +222,34 @@
         if (!items.length) {
           badgeEl.classList.add("hidden");
           const empty = document.createElement("div");
-          empty.className = "text-xs text-slate-400";
+          empty.className = "text-xs";
+          empty.style.color = "var(--hint-color)";
           empty.textContent = "Маркетов пока нет (MVP-заглушка).";
           listEl.appendChild(empty);
           return;
         }
 
         badgeEl.textContent = `${items.length} ${items.length === 1 ? "рынок" : "рынков"}`;
+        badgeEl.style.background = "var(--header-bg-color)";
+        badgeEl.style.color = "var(--hint-color)";
         badgeEl.classList.remove("hidden");
 
         items.forEach((m) => {
           const card = document.createElement("div");
-          card.className = "rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 space-y-1";
+          card.className = "rounded-lg px-3 py-2 space-y-1";
+          card.style.background = "var(--bg-color)";
+          card.style.border = "1px solid var(--header-bg-color)";
 
           const title = document.createElement("div");
           title.className = "flex items-center justify-between gap-2";
-          title.innerHTML = `<span class="font-medium text-slate-100">${m.name || m.symbol || "Маркет"}</span>
-            <span class="text-[11px] px-2 py-0.5 rounded-full ${
-              m.active === false ? "bg-slate-800 text-slate-400" : "bg-emerald-900/60 text-emerald-300"
-            }">${m.active === false ? "неактивен" : "активен"}</span>`;
+          const activeBadge = m.active === false ? 
+            `<span class="text-[11px] px-2 py-0.5 rounded-full" style="background: var(--header-bg-color); color: var(--hint-color);">неактивен</span>` :
+            `<span class="text-[11px] px-2 py-0.5 rounded-full" style="background: rgba(16, 185, 129, 0.2); color: rgb(110, 231, 183);">активен</span>`;
+          title.innerHTML = `<span class="font-medium" style="color: var(--text-color);">${m.name || m.symbol || "Маркет"}</span>${activeBadge}`;
 
           const meta = document.createElement("div");
-          meta.className = "text-[11px] text-slate-400";
+          meta.className = "text-[11px]";
+          meta.style.color = "var(--hint-color)";
           const base = m.base || m.base_currency || "";
           const quote = m.quote || m.quote_currency || "";
           meta.textContent = base && quote ? `${base}/${quote}` : m.description || "";
@@ -212,7 +263,7 @@
       function setSectionError(elId, message) {
         const el = document.getElementById(elId);
         if (el) {
-          el.innerHTML = `<div class="text-xs text-slate-400">Ошибка загрузки: ${message}</div>`;
+          el.innerHTML = `<div class="text-xs" style="color: var(--hint-color);">Ошибка загрузки: ${message}</div>`;
         }
       }
 
@@ -249,9 +300,10 @@
       async function autoAuth() {
         const statusEl = document.getElementById("status");
         try {
-          const tg = window.Telegram?.WebApp;
-          if (!tg) throw new Error("Открой Mini App внутри Telegram.");
-          tg.ready();
+          if (!tg || !tg.initDataUnsafe?.user) {
+            throw new Error("Mini App должен быть открыт внутри Telegram");
+          }
+          
           const initData = tg.initData;
           if (!initData) throw new Error("initData пустой.");
 
@@ -271,6 +323,7 @@
           }
         } catch (e) {
           statusEl.textContent = `Ошибка авторизации: ${e.message}`;
+          statusEl.style.color = "var(--hint-color)";
           console.error("[autoAuth] Error:", e);
         }
       }
