@@ -332,23 +332,26 @@
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
 
-        try {
-          const me = await api("/me");
-          renderProfile(me);
-        } catch (e) {
-          if (profileEl) setSectionError("profile", e?.message || "Не удалось загрузить");
+        const [meResult, balancesResult, marketsResult] = await Promise.allSettled([
+          api("/me"),
+          api("/me/balances"),
+          api("/markets"),
+        ]);
+
+        if (meResult.status === "fulfilled") {
+          renderProfile(meResult.value);
+        } else if (profileEl) {
+          setSectionError("profile", meResult.reason?.message || "Не удалось загрузить");
         }
-        try {
-          const balances = await api("/me/balances");
-          renderBalances(balances);
-        } catch (e) {
-          if (balancesEl) setSectionError("balances", e?.message || "Не удалось загрузить");
+        if (balancesResult.status === "fulfilled") {
+          renderBalances(balancesResult.value);
+        } else if (balancesEl) {
+          setSectionError("balances", balancesResult.reason?.message || "Не удалось загрузить");
         }
-        try {
-          const markets = await api("/markets");
-          renderMarkets(markets);
-        } catch (e) {
-          if (marketsEl) setSectionError("markets", e?.message || "Не удалось загрузить");
+        if (marketsResult.status === "fulfilled") {
+          renderMarkets(marketsResult.value);
+        } else if (marketsEl) {
+          setSectionError("markets", marketsResult.reason?.message || "Не удалось загрузить");
         }
       }
 
