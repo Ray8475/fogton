@@ -91,12 +91,23 @@
           headers["Content-Type"] = "application/json";
           opts.body = JSON.stringify(opts.json);
         }
-        const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
-        const txt = await res.text();
-        let data;
-        try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-        return data;
+        const url = `${API_BASE}${path}`;
+        console.log(`[API] Request: ${opts.method || "GET"} ${url}`);
+        try {
+          const res = await fetch(url, { ...opts, headers });
+          const txt = await res.text();
+          let data;
+          try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+          if (!res.ok) {
+            console.error(`[API] Error ${res.status}:`, data);
+            throw new Error(data.detail || `HTTP ${res.status}`);
+          }
+          console.log(`[API] Success:`, data);
+          return data;
+        } catch (e) {
+          console.error(`[API] Fetch failed:`, e.message, `URL: ${url}`);
+          throw e;
+        }
       }
 
       function renderProfile(me) {
@@ -175,18 +186,37 @@
       }
 
       async function loadData() {
-        const me = await api("/me");
-        renderProfile(me);
+        try {
+          console.log("[loadData] Loading profile...");
+          const me = await api("/me");
+          renderProfile(me);
+        } catch (e) {
+          console.error("[loadData] Failed to load profile:", e);
+          throw e;
+        }
 
-        const balances = await api("/me/balances");
-        renderBalances(balances);
+        try {
+          console.log("[loadData] Loading balances...");
+          const balances = await api("/me/balances");
+          renderBalances(balances);
+        } catch (e) {
+          console.error("[loadData] Failed to load balances:", e);
+          throw e;
+        }
 
-        const markets = await api("/markets");
-        renderMarkets(markets);
+        try {
+          console.log("[loadData] Loading markets...");
+          const markets = await api("/markets");
+          renderMarkets(markets);
+        } catch (e) {
+          console.error("[loadData] Failed to load markets:", e);
+          throw e;
+        }
       }
 
       async function autoAuth() {
         const statusEl = document.getElementById("status");
+        console.log("[autoAuth] Starting auth, API_BASE:", API_BASE, "hostname:", location.hostname);
         try {
           const tg = window.Telegram?.WebApp;
           if (!tg) throw new Error("Открой Mini App внутри Telegram.");
@@ -195,6 +225,7 @@
           if (!initData) throw new Error("initData пустой.");
 
           statusEl.textContent = "Авторизация через Telegram…";
+          console.log("[autoAuth] Calling /auth/telegram...");
           const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
           token = out.token;
           statusEl.textContent = `Авторизация успешна, user_id=${out.user.id}`;
