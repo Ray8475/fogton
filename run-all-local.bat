@@ -49,6 +49,7 @@ if "%TUNNEL_TOKEN%"=="" (
     echo Skipping Cloudflare Tunnel startup.
 ) else (
     REM /k чтобы видеть ошибки туннеля
+    REM В логах cloudflared нормальны сообщения "client disconnected" и "context canceled" — туннель сам переподключается (Retrying connection / Registered tunnel connection).
     start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --protocol http2 --token "%TUNNEL_TOKEN%"
 )
 
