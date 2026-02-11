@@ -62,8 +62,10 @@
       const params = new URLSearchParams(location.search);
       const apiFromQuery = params.get("api");
       const apiFromStorage = localStorage.getItem("apiBase");
-      // по умолчанию ходим в продовый API через Cloudflare Tunnel
-      let API_BASE = apiFromQuery || apiFromStorage || "https://api.fogton.ru";
+      // Автоматическое определение: если локальная разработка (localhost/127.0.0.1), используем локальный API
+      const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const defaultApi = isLocal ? "http://127.0.0.1:8000" : "https://api.fogton.ru";
+      let API_BASE = apiFromQuery || apiFromStorage || defaultApi;
 
       const apiBaseEl = document.getElementById("apiBase");
       const apiInputEl = document.getElementById("apiInput");
