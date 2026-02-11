@@ -138,6 +138,7 @@
         </div>
         <div class="rounded-xl p-4 space-y-3 tg-card mt-4">
           <h2 class="font-semibold tg-text">Привязанный TON-кошелёк</h2>
+          <p class="text-xs tg-hint">Привязка хранится в аккаунте и синхронизируется между устройствами.</p>
           <div id="connectedWalletBlock" class="text-sm tg-text">
             <div class="text-xs tg-hint">Загрузка...</div>
           </div>
@@ -189,6 +190,9 @@
         const btn = document.querySelector('.nav-tab[data-tab="' + tabId + '"]');
         if (section) section.classList.remove("hidden");
         if (btn) btn.classList.add("active");
+        if (tabId === "wallet" && token) {
+          api("/me").then((meData) => renderConnectedWallet(meData)).catch(() => {});
+        }
       }
 
       document.querySelectorAll(".nav-tab").forEach((btn) => {

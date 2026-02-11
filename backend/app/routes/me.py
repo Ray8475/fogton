@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -30,10 +31,16 @@ class MeOut(BaseModel):
 
 
 @router.get("", response_model=MeOut)
-def get_me(user_id: int = Depends(require_user_id), db: Session = Depends(get_db)) -> MeOut:
+def get_me(
+    user_id: int = Depends(require_user_id),
+    db: Session = Depends(get_db),
+    response: Response,
+) -> MeOut:
+    """Данные текущего пользователя. connected_ton_address хранится в БД и синхронизируется между устройствами."""
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    response.headers["Cache-Control"] = "no-store"
     return MeOut(
         id=user.id,
         telegram_user_id=user.telegram_user_id,
