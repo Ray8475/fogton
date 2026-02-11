@@ -32,9 +32,9 @@ class MeOut(BaseModel):
 
 @router.get("", response_model=MeOut)
 def get_me(
+    response: Response,
     user_id: int = Depends(require_user_id),
     db: Session = Depends(get_db),
-    response: Response,
 ) -> MeOut:
     """Данные текущего пользователя. connected_ton_address хранится в БД и синхронизируется между устройствами."""
     user = db.get(User, user_id)
