@@ -28,17 +28,20 @@
 
       <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
         <h2 class="font-semibold">Профиль</h2>
-        <pre id="profile" class="text-xs text-slate-200 whitespace-pre-wrap"></pre>
+        <div id="profile" class="text-sm text-slate-200 space-y-1"></div>
       </div>
 
       <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
         <h2 class="font-semibold">Баланс</h2>
-        <pre id="balances" class="text-xs text-slate-200 whitespace-pre-wrap"></pre>
+        <div id="balances" class="text-sm text-slate-200 space-y-1"></div>
       </div>
 
       <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
-        <h2 class="font-semibold">Рынки</h2>
-        <pre id="markets" class="text-xs text-slate-200 whitespace-pre-wrap"></pre>
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Рынки</h2>
+          <span id="marketsBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 hidden"></span>
+        </div>
+        <div id="markets" class="text-sm text-slate-200 space-y-2"></div>
       </div>
 
       <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3 text-xs text-slate-400">
@@ -94,15 +97,90 @@
         return data;
       }
 
+      function renderProfile(me) {
+        const el = document.getElementById("profile");
+        el.innerHTML = "";
+        const rows = [
+          ["Внутренний ID", me.id],
+          ["Telegram user_id", me.telegram_user_id],
+        ];
+        rows.forEach(([label, value]) => {
+          const row = document.createElement("div");
+          row.className = "flex justify-between items-center gap-4";
+          row.innerHTML = `<span class="text-slate-400 text-xs">${label}</span><span class="text-slate-100 text-sm font-medium">${value}</span>`;
+          el.appendChild(row);
+        });
+      }
+
+      function renderBalances(balances) {
+        const el = document.getElementById("balances");
+        el.innerHTML = "";
+        if (!balances || !Array.isArray(balances.balances) || balances.balances.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "text-xs text-slate-400";
+          empty.textContent = "Пока нет балансов.";
+          el.appendChild(empty);
+          return;
+        }
+        balances.balances.forEach((b) => {
+          const row = document.createElement("div");
+          row.className = "flex justify-between items-center gap-4";
+          row.innerHTML = `<span class="text-slate-300 text-sm font-medium">${b.currency}</span><span class="text-slate-100 text-sm tabular-nums">${b.available}</span>`;
+          el.appendChild(row);
+        });
+      }
+
+      function renderMarkets(markets) {
+        const listEl = document.getElementById("markets");
+        const badgeEl = document.getElementById("marketsBadge");
+        listEl.innerHTML = "";
+
+        const items = Array.isArray(markets) ? markets : markets?.markets || [];
+
+        if (!items.length) {
+          badgeEl.classList.add("hidden");
+          const empty = document.createElement("div");
+          empty.className = "text-xs text-slate-400";
+          empty.textContent = "Маркетов пока нет (MVP-заглушка).";
+          listEl.appendChild(empty);
+          return;
+        }
+
+        badgeEl.textContent = `${items.length} ${items.length === 1 ? "рынок" : "рынков"}`;
+        badgeEl.classList.remove("hidden");
+
+        items.forEach((m) => {
+          const card = document.createElement("div");
+          card.className = "rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 space-y-1";
+
+          const title = document.createElement("div");
+          title.className = "flex items-center justify-between gap-2";
+          title.innerHTML = `<span class="font-medium text-slate-100">${m.name || m.symbol || "Маркет"}</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full ${
+              m.active === false ? "bg-slate-800 text-slate-400" : "bg-emerald-900/60 text-emerald-300"
+            }">${m.active === false ? "неактивен" : "активен"}</span>`;
+
+          const meta = document.createElement("div");
+          meta.className = "text-[11px] text-slate-400";
+          const base = m.base || m.base_currency || "";
+          const quote = m.quote || m.quote_currency || "";
+          meta.textContent = base && quote ? `${base}/${quote}` : m.description || "";
+
+          card.appendChild(title);
+          card.appendChild(meta);
+          listEl.appendChild(card);
+        });
+      }
+
       async function loadData() {
         const me = await api("/me");
-        document.getElementById("profile").textContent = JSON.stringify(me, null, 2);
+        renderProfile(me);
 
         const balances = await api("/me/balances");
-        document.getElementById("balances").textContent = JSON.stringify(balances, null, 2);
+        renderBalances(balances);
 
         const markets = await api("/markets");
-        document.getElementById("markets").textContent = JSON.stringify(markets, null, 2);
+        renderMarkets(markets);
       }
 
       async function autoAuth() {

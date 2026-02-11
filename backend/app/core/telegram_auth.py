@@ -25,8 +25,18 @@ def verify_telegram_webapp_init_data(init_data: str, bot_token: str) -> dict:
     check_pairs.sort(key=lambda kv: kv[0])
     data_check_string = "\n".join([f"{k}={v}" for (k, v) in check_pairs])
 
-    secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
-    calculated_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    # Спецификация Telegram WebApp:
+    # secret_key = HMAC_SHA256(key="WebAppData", message=bot_token)
+    secret_key = hmac.new(
+        key=b"WebAppData",
+        msg=bot_token.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).digest()
+    calculated_hash = hmac.new(
+        key=secret_key,
+        msg=data_check_string.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
 
     if not hmac.compare_digest(calculated_hash, received_hash):
         raise ValueError("initData hash mismatch")
