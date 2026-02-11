@@ -96,6 +96,22 @@ class Deposit(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+# --- Вывод (withdrawals) ---
+
+
+class Withdrawal(Base):
+    __tablename__ = "withdrawals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    currency: Mapped[str] = mapped_column(String(CURRENCY_LEN), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(36, 18), nullable=False)
+    destination_address: Mapped[str] = mapped_column(String(68), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)  # pending | completed | failed
+    tx_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 # --- Торговля (пока без конкретной торговой модели) ---
 
 

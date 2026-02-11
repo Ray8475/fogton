@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -9,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.settings import settings
 from app.core.jwt import decode_jwt
 from app.db.database import get_db
-from app.db.models import Balance, User
+from app.db.models import Balance, LedgerEntry, User, Withdrawal
 
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -121,4 +123,92 @@ def disconnect_wallet(
     user.connected_ton_address = None
     db.commit()
     return {"ok": True}
+
+
+# --- Вывод (withdraw) ---
+
+
+class WithdrawIn(BaseModel):
+    amount: str
+    currency: str = "TON"
+    destination_address: str
+
+
+@router.post("/withdraw")
+def create_withdraw(
+    body: WithdrawIn,
+    user_id: int = Depends(require_user_id),
+    db: Session = Depends(get_db),
+):
+    """Создать заявку на вывод. Проверка баланса, списание, запись в withdrawals и ledger. On-chain — заглушка (status pending)."""
+    if not _is_ton_address(body.destination_address):
+        raise HTTPException(status_code=400, detail="Некорректный адрес")
+    try:
+        amount = Decimal(body.amount)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Некорректная сумма")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Сумма должна быть больше 0")
+    currency = (body.currency or "TON").strip().upper()
+    if currency not in ("TON", "USDT"):
+        raise HTTPException(status_code=400, detail="Валюта: TON или USDT")
+
+    balance = db.query(Balance).filter(Balance.user_id == user_id, Balance.currency == currency).first()
+    if balance is None or balance.available < amount:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
+
+    withdrawal = Withdrawal(
+        user_id=user_id,
+        currency=currency,
+        amount=amount,
+        destination_address=body.destination_address.strip(),
+        status="pending",
+        tx_hash=None,
+    )
+    db.add(withdrawal)
+    db.flush()
+
+    balance.available -= amount
+    entry = LedgerEntry(
+        user_id=user_id,
+        currency=currency,
+        delta=-amount,
+        reason="withdraw",
+        ref_type="withdrawal",
+        ref_id=withdrawal.id,
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(withdrawal)
+    return {
+        "id": withdrawal.id,
+        "status": withdrawal.status,
+        "amount": str(withdrawal.amount),
+        "currency": withdrawal.currency,
+        "destination_address": withdrawal.destination_address,
+        "created_at": withdrawal.created_at.isoformat() if withdrawal.created_at else None,
+    }
+
+
+@router.get("/withdrawals")
+def list_withdrawals(
+    user_id: int = Depends(require_user_id),
+    db: Session = Depends(get_db),
+):
+    """Список заявок на вывод пользователя."""
+    rows = db.query(Withdrawal).filter(Withdrawal.user_id == user_id).order_by(Withdrawal.created_at.desc()).all()
+    return {
+        "withdrawals": [
+            {
+                "id": w.id,
+                "status": w.status,
+                "amount": str(w.amount),
+                "currency": w.currency,
+                "destination_address": (w.destination_address[:8] + "…" + w.destination_address[-6:]) if len(w.destination_address) > 16 else w.destination_address,
+                "tx_hash": w.tx_hash,
+                "created_at": w.created_at.isoformat() if w.created_at else None,
+            }
+            for w in rows
+        ],
+    }
 

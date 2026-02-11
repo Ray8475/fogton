@@ -83,7 +83,7 @@
         <div class="text-xs tg-hint">
           Это приложение должно быть запущено <strong>внутри Telegram!</strong>
         </div>
-        <div class="text-xs tg-hint">Откройте Mini App через кнопку в боте.</div>
+        <div class="text-xs tg-hint">Откройте Mini App в боте.</div>
       </div>
     </div>
 
@@ -109,7 +109,7 @@
         </div>
         <div class="rounded-xl p-4 space-y-3 tg-card">
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold tg-text">Рынки</h2>
+            <h2 class="font-semibold tg-text">Твои фьючерсы</h2>
             <span id="marketsBadge" class="text-[11px] px-2 py-0.5 rounded-full hidden tg-hint" style="background: var(--header-bg-color);"></span>
           </div>
           <div id="markets" class="text-sm space-y-2 tg-text">
@@ -143,6 +143,27 @@
             <div class="text-xs tg-hint">Загрузка...</div>
           </div>
           <div id="ton-connect-btn" class="mt-2"></div>
+        </div>
+        <div class="rounded-xl p-4 space-y-3 tg-card mt-4">
+          <h2 class="font-semibold tg-text">Вывод</h2>
+          <form id="withdrawForm" class="space-y-2">
+            <div>
+              <label class="text-xs tg-hint block mb-0.5">Сумма (TON)</label>
+              <input type="text" id="withdrawAmount" class="w-full rounded-lg px-3 py-2 text-sm tg-input border" placeholder="0" inputmode="decimal" />
+            </div>
+            <div>
+              <label class="text-xs tg-hint block mb-0.5">Адрес назначения</label>
+              <input type="text" id="withdrawAddress" class="w-full rounded-lg px-3 py-2 text-sm tg-input border font-mono" placeholder="EQ..." />
+            </div>
+            <button type="submit" class="rounded-lg px-4 py-2 text-sm font-medium tg-btn w-full">Вывести</button>
+          </form>
+          <p id="withdrawMessage" class="text-xs tg-hint hidden"></p>
+        </div>
+        <div class="rounded-xl p-4 space-y-3 tg-card mt-4">
+          <h2 class="font-semibold tg-text">Заявки на вывод</h2>
+          <div id="withdrawalsList" class="text-sm space-y-2 tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
+          </div>
         </div>
       </div>
     </div>
@@ -310,6 +331,26 @@
         }
       }
 
+      function renderWithdrawals(data) {
+        const el = document.getElementById("withdrawalsList");
+        if (!el) return;
+        const list = (data && data.withdrawals) ? data.withdrawals : [];
+        if (list.length === 0) {
+          el.innerHTML = "<p class=\"text-xs tg-hint\">Заявок пока нет.</p>";
+          return;
+        }
+        el.innerHTML = "";
+        list.forEach((w) => {
+          const statusLabel = w.status === "completed" ? "Выполнено" : w.status === "failed" ? "Ошибка" : "В обработке";
+          const card = document.createElement("div");
+          card.className = "rounded-lg px-3 py-2 text-xs";
+          card.style.background = "var(--bg-color)";
+          card.style.border = "1px solid var(--header-bg-color)";
+          card.innerHTML = `<div class="flex justify-between gap-2"><span class="font-medium tg-text">${w.amount} ${w.currency}</span><span class="tg-hint">${statusLabel}</span></div><div class="tg-hint mt-0.5">${w.destination_address}</div>`;
+          el.appendChild(card);
+        });
+      }
+
       function initTonConnect() {
         if (typeof TON_CONNECT_UI === "undefined" || tonConnectUI) return;
         const manifestUrl = location.origin + "/tonconnect-manifest.json";
@@ -361,7 +402,7 @@
           badgeEl.classList.add("hidden");
           const empty = document.createElement("div");
           empty.className = "text-xs tg-hint";
-          empty.textContent = "Маркетов пока нет (MVP-заглушка).";
+          empty.textContent = "Маркетов пока нет (заглушка).";
           listEl.appendChild(empty);
           return;
         }
@@ -407,11 +448,13 @@
         const profileEl = document.getElementById("profile");
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
+        const withdrawalsEl = document.getElementById("withdrawalsList");
 
-        const [meResult, balancesResult, marketsResult] = await Promise.allSettled([
+        const [meResult, balancesResult, marketsResult, withdrawalsResult] = await Promise.allSettled([
           api("/me"),
           api("/me/balances"),
           api("/markets"),
+          api("/me/withdrawals"),
         ]);
 
         if (meResult.status === "fulfilled") {
@@ -429,6 +472,11 @@
           renderMarkets(marketsResult.value);
         } else if (marketsEl) {
           setSectionError("markets", marketsResult.reason?.message || "Не удалось загрузить");
+        }
+        if (withdrawalsResult.status === "fulfilled") {
+          renderWithdrawals(withdrawalsResult.value);
+        } else if (withdrawalsEl) {
+          withdrawalsEl.innerHTML = "<p class=\"text-xs tg-hint\">Не удалось загрузить заявки.</p>";
         }
       }
 
@@ -468,10 +516,39 @@
         const profileEl = document.getElementById("profile");
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
+        const withdrawalsEl = document.getElementById("withdrawalsList");
         if (profileEl) profileEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
         if (balancesEl) balancesEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
         if (marketsEl) marketsEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
+        if (withdrawalsEl) withdrawalsEl.innerHTML = "<div class=\"text-xs tg-hint\">Загрузка…</div>";
         loadData();
+      });
+
+      document.getElementById("withdrawForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const amountEl = document.getElementById("withdrawAmount");
+        const addressEl = document.getElementById("withdrawAddress");
+        const msgEl = document.getElementById("withdrawMessage");
+        const amount = (amountEl && amountEl.value || "").trim();
+        const address = (addressEl && addressEl.value || "").trim();
+        msgEl.classList.add("hidden");
+        if (!amount || !address) {
+          msgEl.textContent = "Укажите сумму и адрес.";
+          msgEl.classList.remove("hidden");
+          return;
+        }
+        api("/me/withdraw", { method: "POST", json: { amount, currency: "TON", destination_address: address } })
+          .then(() => {
+            msgEl.textContent = "Заявка создана. Статус — в обработке.";
+            msgEl.classList.remove("hidden");
+            if (amountEl) amountEl.value = "";
+            if (addressEl) addressEl.value = "";
+            loadData();
+          })
+          .catch((err) => {
+            msgEl.textContent = err && err.message ? err.message : "Ошибка при создании заявки.";
+            msgEl.classList.remove("hidden");
+          });
       });
 
       document.getElementById("btnRetry").addEventListener("click", () => {
