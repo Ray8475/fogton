@@ -8,27 +8,22 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body class="bg-slate-950 text-slate-100">
-    <div class="max-w-xl mx-auto p-4 space-y-4">
+    <!-- Экран загрузки -->
+    <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
+      <div class="max-w-xs w-full rounded-2xl bg-slate-900 border border-slate-800 px-6 py-5 space-y-3 text-center">
+        <div class="text-sm font-semibold text-slate-200">Gifts Futures (MVP)</div>
+        <div class="text-xs text-slate-400">
+          Авторизация через Telegram WebApp initData → JWT.
+        </div>
+        <div class="text-sm text-slate-300" id="status">Запуск Mini App…</div>
+      </div>
+    </div>
+
+    <!-- Основной экран после успешной авторизации -->
+    <div id="appRoot" class="max-w-xl mx-auto p-4 space-y-4 hidden">
       <div class="rounded-xl bg-slate-900 p-4 border border-slate-800">
         <h1 class="text-xl font-semibold">Gifts Futures (MVP)</h1>
-        <p class="text-slate-300 text-sm">Авторизация через Telegram WebApp initData → JWT.</p>
-      </div>
-
-      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
-        <div class="text-sm text-slate-300">
-          <div><span class="font-medium text-slate-200">API:</span> <span id="apiBase"></span></div>
-          <div><span class="font-medium text-slate-200">Статус:</span> <span id="status">ожидание авторизации…</span></div>
-        </div>
-
-        <div class="space-y-2">
-          <label class="block text-xs text-slate-400">API base URL (можно менять без правки ссылки)</label>
-          <div class="flex gap-2">
-            <input id="apiInput" class="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-100" placeholder="http://127.0.0.1:8000" />
-            <button id="btnSaveApi" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-2 text-sm">
-              Сохранить
-            </button>
-          </div>
-        </div>
+        <p class="text-slate-300 text-sm">Авторизация выполнена, данные загружены с API.</p>
       </div>
 
       <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3">
@@ -45,16 +40,32 @@
         <h2 class="font-semibold">Рынки</h2>
         <pre id="markets" class="text-xs text-slate-200 whitespace-pre-wrap"></pre>
       </div>
+
+      <div class="rounded-xl bg-slate-900 p-4 border border-slate-800 space-y-3 text-xs text-slate-400">
+        <div class="font-semibold text-slate-300">Настройки API (для отладки)</div>
+        <div class="space-y-2">
+          <div><span class="font-medium text-slate-200">API:</span> <span id="apiBase"></span></div>
+          <div class="flex gap-2">
+            <input id="apiInput" class="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-1 text-xs text-slate-100" placeholder="https://api.fogton.ru" />
+            <button id="btnSaveApi" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1 text-xs">
+              Сохранить
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
       const params = new URLSearchParams(location.search);
       const apiFromQuery = params.get("api");
       const apiFromStorage = localStorage.getItem("apiBase");
-      let API_BASE = apiFromQuery || apiFromStorage || "http://127.0.0.1:8000";
+      // по умолчанию ходим в продовый API через Cloudflare Tunnel
+      let API_BASE = apiFromQuery || apiFromStorage || "https://api.fogton.ru";
 
       const apiBaseEl = document.getElementById("apiBase");
       const apiInputEl = document.getElementById("apiInput");
+      const loadingScreen = document.getElementById("loadingScreen");
+      const appRoot = document.getElementById("appRoot");
       apiBaseEl.textContent = API_BASE;
       apiInputEl.value = API_BASE;
 
@@ -98,16 +109,20 @@
         const statusEl = document.getElementById("status");
         try {
           const tg = window.Telegram?.WebApp;
-          if (!tg) throw new Error("Telegram WebApp API недоступен (открой через Telegram).");
+          if (!tg) throw new Error("Открой Mini App внутри Telegram.");
           tg.ready();
           const initData = tg.initData;
           if (!initData) throw new Error("initData пустой.");
 
-          statusEl.textContent = "Авторизация...";
+          statusEl.textContent = "Авторизация через Telegram…";
           const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
           token = out.token;
-          statusEl.textContent = `Вы вошли, user_id=${out.user.id}`;
+          statusEl.textContent = `Авторизация успешна, user_id=${out.user.id}`;
           await loadData();
+
+          // показываем основной экран
+          loadingScreen.classList.add("hidden");
+          appRoot.classList.remove("hidden");
         } catch (e) {
           statusEl.textContent = `Ошибка авторизации: ${e.message}`;
         }
