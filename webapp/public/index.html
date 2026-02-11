@@ -168,8 +168,9 @@
 
       let token = null;
 
-      const API_RETRIES = 3;
-      const API_RETRY_DELAY_MS = 400;
+      const API_RETRIES = 4;
+      const API_RETRY_DELAY_MS = 800;
+      const API_TIMEOUT_MS = 20000;
 
       async function api(path, opts = {}) {
         const headers = Object.assign({}, opts.headers || {});
@@ -181,8 +182,11 @@
         const url = `${API_BASE}${path}`;
         let lastError = null;
         for (let attempt = 1; attempt <= API_RETRIES; attempt++) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
           try {
-            const res = await fetch(url, { ...opts, headers });
+            const res = await fetch(url, { ...opts, headers, signal: controller.signal });
+            clearTimeout(timeoutId);
             const txt = await res.text();
             let data;
             try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
@@ -196,9 +200,11 @@
             }
             return data;
           } catch (e) {
+            clearTimeout(timeoutId);
             lastError = e;
-            const isRetryable = e.message === "Failed to fetch" || 
-                                e.message.includes("NetworkError") || 
+            const isRetryable = e.name === "AbortError" ||
+                                e.message === "Failed to fetch" ||
+                                e.message.includes("NetworkError") ||
                                 e.message.includes("Load failed") ||
                                 e.name === "TypeError" ||
                                 e.name === "NetworkError";
@@ -206,6 +212,7 @@
               await new Promise((r) => setTimeout(r, API_RETRY_DELAY_MS));
               continue;
             }
+            if (e.name === "AbortError") throw new Error("Превышено время ожидания. Проверьте интернет.");
             throw e;
           }
         }
@@ -337,7 +344,10 @@
 
           loadData();
         } catch (e) {
-          statusEl.textContent = `Ошибка авторизации: ${e.message}`;
+          const msg = e.message === "Failed to fetch" || e.name === "TypeError"
+            ? "Нет связи с сервером. Проверьте интернет и попробуйте снова."
+            : `Ошибка: ${e.message}`;
+          statusEl.textContent = msg;
           statusEl.classList.add("tg-hint");
           console.error("[autoAuth] Error:", e);
         }
