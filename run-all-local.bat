@@ -17,11 +17,17 @@ REM /k чтобы видеть traceback, если бот упадёт
 start "bot" /D "%ROOT%" cmd /k python run_bot.py
 
 echo Starting Cloudflare Tunnel (cloudflared) ...
-if "%CLOUDFLARE_TUNNEL_TOKEN%"=="" (
-    echo WARNING: CLOUDFLARE_TUNNEL_TOKEN is not set. Set it in your environment before running this script.
+REM Читаем токен из .env файла через PowerShell (более надёжно)
+set "TUNNEL_TOKEN="
+for /f "delims=" %%i in ('powershell -Command "if (Test-Path '%ROOT%\.env') { Get-Content '%ROOT%\.env' | Where-Object { $_ -match '^CLOUDFLARED_TUNNEL_TOKEN=(.+)$' } | ForEach-Object { $matches[1] } }"') do set "TUNNEL_TOKEN=%%i"
+REM Если не нашли в .env, пробуем переменную окружения (старый вариант)
+if "%TUNNEL_TOKEN%"=="" set "TUNNEL_TOKEN=%CLOUDFLARE_TUNNEL_TOKEN%"
+if "%TUNNEL_TOKEN%"=="" (
+    echo WARNING: CLOUDFLARED_TUNNEL_TOKEN not found in .env or environment.
+    echo Skipping Cloudflare Tunnel startup.
 ) else (
     REM /k чтобы видеть ошибки туннеля
-    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --token "%CLOUDFLARE_TUNNEL_TOKEN%"
+    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --token "%TUNNEL_TOKEN%"
 )
 
 echo.
