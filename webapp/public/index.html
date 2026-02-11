@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gifts Futures MVP</title>
-    <link rel="preconnect" href="https://api.fogton.ru" crossorigin />
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
     <link rel="preconnect" href="https://telegram.org" crossorigin />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -61,6 +60,9 @@
         max-width: 18rem;
         width: 100%;
       }
+      .nav-tab.active {
+        color: var(--button-color);
+      }
     </style>
   </head>
   <body>
@@ -87,67 +89,70 @@
     </div>
 
     <!-- Основной экран после успешной авторизации -->
-    <div id="appRoot" class="max-w-xl mx-auto p-4 space-y-4 hidden">
-      <div class="rounded-xl p-4 tg-card flex flex-col gap-2">
-        <div class="flex items-center justify-between gap-2">
-          <div>
-            <h1 class="text-xl font-semibold tg-text">Gifts Futures (MVP)</h1>
-            <p class="text-sm tg-hint">Данные загружены с API.</p>
+    <div id="appRoot" class="max-w-xl mx-auto p-4 pb-20 space-y-4 hidden">
+      <!-- Главная -->
+      <div id="sectionHome" class="app-section space-y-4">
+        <div class="rounded-xl p-4 tg-card flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <h1 class="text-xl font-semibold tg-text">Gifts Futures</h1>
+            <button id="btnRefreshData" type="button" class="rounded-lg px-3 py-1.5 text-xs tg-btn shrink-0">Обновить</button>
           </div>
-          <button id="btnRefreshData" type="button" class="rounded-lg px-3 py-1.5 text-xs tg-btn shrink-0">Обновить</button>
+        </div>
+        <div class="rounded-xl p-4 space-y-3 tg-card">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold tg-text">Рынки</h2>
+            <span id="marketsBadge" class="text-[11px] px-2 py-0.5 rounded-full hidden tg-hint" style="background: var(--header-bg-color);"></span>
+          </div>
+          <div id="markets" class="text-sm space-y-2 tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
+          </div>
         </div>
       </div>
 
-      <div class="rounded-xl p-4 space-y-3 tg-card">
-        <h2 class="font-semibold tg-text">Профиль</h2>
-        <div id="profile" class="text-sm space-y-1 tg-text">
-          <div class="text-xs tg-hint">Загрузка...</div>
+      <!-- Профиль -->
+      <div id="sectionProfile" class="app-section hidden">
+        <div class="rounded-xl p-4 space-y-3 tg-card">
+          <h2 class="font-semibold tg-text">Профиль</h2>
+          <div id="profile" class="text-sm space-y-1 tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
+          </div>
         </div>
       </div>
 
-      <div class="rounded-xl p-4 space-y-3 tg-card">
-        <h2 class="font-semibold tg-text">Баланс</h2>
-        <div id="balances" class="text-sm space-y-1 tg-text">
-          <div class="text-xs tg-hint">Загрузка...</div>
-        </div>
-      </div>
-
-      <div class="rounded-xl p-4 space-y-3 tg-card">
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold tg-text">Рынки</h2>
-          <span id="marketsBadge" class="text-[11px] px-2 py-0.5 rounded-full hidden tg-hint" style="background: var(--header-bg-color);"></span>
-        </div>
-        <div id="markets" class="text-sm space-y-2 tg-text">
-          <div class="text-xs tg-hint">Загрузка...</div>
-        </div>
-      </div>
-
-      <div class="rounded-xl p-4 space-y-3 text-xs tg-card tg-hint">
-        <div class="font-semibold tg-text">Настройки API (для отладки)</div>
-        <div class="space-y-2">
-          <div><span class="font-medium tg-text">API:</span> <span id="apiBase" class="tg-text"></span></div>
-          <div class="flex gap-2">
-            <input id="apiInput" class="flex-1 rounded-lg px-3 py-1 text-xs tg-input border" placeholder="https://api.fogton.ru" />
-            <button id="btnSaveApi" class="rounded-lg px-3 py-1 text-xs tg-btn">Сохранить</button>
+      <!-- Кошелёк -->
+      <div id="sectionWallet" class="app-section hidden">
+        <div class="rounded-xl p-4 space-y-3 tg-card">
+          <h2 class="font-semibold tg-text">Кошелёк</h2>
+          <div id="balances" class="text-sm space-y-1 tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
           </div>
         </div>
       </div>
     </div>
 
-    <script>
-      const params = new URLSearchParams(location.search);
-      const apiFromQuery = params.get("api");
-      const apiFromStorage = localStorage.getItem("apiBase");
-      // Автоматическое определение: если локальная разработка (localhost/127.0.0.1), используем локальный API
-      const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      const defaultApi = isLocal ? "http://127.0.0.1:8000" : "https://api.fogton.ru";
-      let API_BASE = apiFromQuery || apiFromStorage || defaultApi;
+    <!-- Нижняя навигация -->
+    <nav id="bottomNav" class="fixed bottom-0 left-0 right-0 hidden max-w-xl mx-auto border-t tg-card" style="border-color: var(--header-bg-color);">
+      <div class="flex">
+        <button type="button" data-tab="home" class="nav-tab flex-1 py-3 text-sm font-medium tg-text hover:opacity-90 transition-opacity">
+          Главная
+        </button>
+        <button type="button" data-tab="profile" class="nav-tab flex-1 py-3 text-sm font-medium tg-text hover:opacity-90 transition-opacity">
+          Профиль
+        </button>
+        <button type="button" data-tab="wallet" class="nav-tab flex-1 py-3 text-sm font-medium tg-text hover:opacity-90 transition-opacity">
+          Кошелёк
+        </button>
+      </div>
+    </nav>
 
-      const apiBaseEl = document.getElementById("apiBase");
-      const apiInputEl = document.getElementById("apiInput");
+    <script>
+      const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const API_BASE = isLocal ? "http://127.0.0.1:8000" : "https://api.fogton.ru";
+
       const loadingScreen = document.getElementById("loadingScreen");
       const appRoot = document.getElementById("appRoot");
       const notInTelegram = document.getElementById("notInTelegram");
+      const bottomNav = document.getElementById("bottomNav");
       
       const tg = window.Telegram?.WebApp;
       
@@ -160,17 +165,20 @@
       
       tg.ready();
       tg.expand();
-      
-      apiBaseEl.textContent = API_BASE;
-      apiInputEl.value = API_BASE;
 
-      document.getElementById("btnSaveApi").addEventListener("click", () => {
-        const v = (apiInputEl.value || "").trim();
-        if (!v) return;
-        API_BASE = v;
-        localStorage.setItem("apiBase", v);
-        apiBaseEl.textContent = v;
+      function showTab(tabId) {
+        document.querySelectorAll(".app-section").forEach((el) => el.classList.add("hidden"));
+        document.querySelectorAll(".nav-tab").forEach((el) => el.classList.remove("active"));
+        const section = document.getElementById("section" + (tabId === "home" ? "Home" : tabId === "profile" ? "Profile" : "Wallet"));
+        const btn = document.querySelector('.nav-tab[data-tab="' + tabId + '"]');
+        if (section) section.classList.remove("hidden");
+        if (btn) btn.classList.add("active");
+      }
+
+      document.querySelectorAll(".nav-tab").forEach((btn) => {
+        btn.addEventListener("click", () => showTab(btn.getAttribute("data-tab")));
       });
+      showTab("home");
 
       let token = null;
 
@@ -360,6 +368,7 @@
           
           loadingScreen.classList.add("hidden");
           appRoot.classList.remove("hidden");
+          bottomNav.classList.remove("hidden");
 
           loadData();
         } catch (e) {
