@@ -49,7 +49,7 @@ if "%TUNNEL_TOKEN%"=="" (
     echo Skipping Cloudflare Tunnel startup.
 ) else (
     REM /k чтобы видеть ошибки туннеля
-    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --protocol http2 --no-autoupdate --grace-period 30s --token "%TUNNEL_TOKEN%"
+    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --protocol http2 --grace-period 30s --autoupdate-freq 168h --token "%TUNNEL_TOKEN%"
 )
 
 echo.

@@ -31,7 +31,7 @@ if (-not $NoTunnel) {
     else {
         Write-Host "Starting Cloudflare Tunnel (cloudflared) ..." -ForegroundColor Green
         Start-Process cloudflared.exe -ArgumentList @(
-            "tunnel", "run", "--protocol", "http2", "--no-autoupdate", "--grace-period", "30s", "--token", $token
+            "tunnel", "run", "--protocol", "http2", "--grace-period", "30s", "--autoupdate-freq", "168h", "--token", $token
         ) -WorkingDirectory $Root
     }
 }
