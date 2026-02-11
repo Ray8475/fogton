@@ -175,23 +175,26 @@
       let token = null;
 
       const API_RETRIES = 4;
-      const API_RETRY_DELAY_MS = 1000;
-      const API_TIMEOUT_MS = 35000;
+      const API_RETRY_DELAY_MS = 1500;
+      const API_TIMEOUT_MS = 45000;
+      const API_TIMEOUT_AUTH_MS = 60000;
 
       async function api(path, opts = {}) {
-        const headers = Object.assign({}, opts.headers || {});
+        const timeoutMs = opts.timeoutMs || (path === "/auth/telegram" ? API_TIMEOUT_AUTH_MS : API_TIMEOUT_MS);
+        const { timeoutMs: _tm, ...fetchOpts } = opts;
+        const headers = Object.assign({}, fetchOpts.headers || {});
         if (token) headers["Authorization"] = `Bearer ${token}`;
         if (opts.json) {
           headers["Content-Type"] = "application/json";
-          opts.body = JSON.stringify(opts.json);
+          fetchOpts.body = JSON.stringify(opts.json);
         }
         const url = `${API_BASE}${path}`;
         let lastError = null;
         for (let attempt = 1; attempt <= API_RETRIES; attempt++) {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           try {
-            const res = await fetch(url, { ...opts, headers, signal: controller.signal });
+            const res = await fetch(url, { ...fetchOpts, headers, signal: controller.signal });
             clearTimeout(timeoutId);
             const txt = await res.text();
             let data;
@@ -315,20 +318,24 @@
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
 
-        const [meRes, balancesRes, marketsRes] = await Promise.allSettled([
-          api("/me"),
-          api("/me/balances"),
-          api("/markets"),
-        ]);
-
-        if (meRes.status === "fulfilled") renderProfile(meRes.value);
-        else if (profileEl) setSectionError("profile", meRes.reason?.message || "Не удалось загрузить");
-
-        if (balancesRes.status === "fulfilled") renderBalances(balancesRes.value);
-        else if (balancesEl) setSectionError("balances", balancesRes.reason?.message || "Не удалось загрузить");
-
-        if (marketsRes.status === "fulfilled") renderMarkets(marketsRes.value);
-        else if (marketsEl) setSectionError("markets", marketsRes.reason?.message || "Не удалось загрузить");
+        try {
+          const me = await api("/me");
+          renderProfile(me);
+        } catch (e) {
+          if (profileEl) setSectionError("profile", e?.message || "Не удалось загрузить");
+        }
+        try {
+          const balances = await api("/me/balances");
+          renderBalances(balances);
+        } catch (e) {
+          if (balancesEl) setSectionError("balances", e?.message || "Не удалось загрузить");
+        }
+        try {
+          const markets = await api("/markets");
+          renderMarkets(markets);
+        } catch (e) {
+          if (marketsEl) setSectionError("markets", e?.message || "Не удалось загрузить");
+        }
       }
 
       async function autoAuth() {
