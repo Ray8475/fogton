@@ -10,7 +10,7 @@ from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import Message
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from dotenv import load_dotenv
@@ -48,16 +48,8 @@ logger = get_logger("bot.main")
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    kb = None
-    if WEBAPP_URL:
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="Открыть приложение", url=WEBAPP_URL)]
-            ]
-        )
     await message.answer(
         "Привет! Это MVP Gifts Futures. Открой Mini App:",
-        reply_markup=kb,
     )
 
 
