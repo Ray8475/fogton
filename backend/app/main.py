@@ -18,6 +18,7 @@ from app.routes.auth import router as auth_router
 from app.routes.me import router as me_router
 from app.routes.markets import router as markets_router
 from app.routes.ton_webhook import router as ton_webhook_router
+from app.routes.admin import router as admin_router
 
 
 class KeepAliveMiddleware(BaseHTTPMiddleware):
@@ -59,6 +60,8 @@ def create_app() -> FastAPI:
     app.include_router(me_router)
     app.include_router(markets_router)
     app.include_router(ton_webhook_router)
+    # Админ-панель: управление справочниками и корректировка балансов
+    app.include_router(admin_router)
     return app
 
 
