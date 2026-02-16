@@ -2,28 +2,16 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi import Response
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.settings import settings
-from app.core.jwt import decode_jwt
+from app.core.auth_deps import require_user_id_dep
 from app.db.database import get_db
 from app.db.models import Balance, LedgerEntry, User, Withdrawal
 
 
 router = APIRouter(prefix="/me", tags=["me"])
-security = HTTPBearer()
-
-
-def require_user_id(creds: HTTPAuthorizationCredentials = Depends(security)) -> int:
-    try:
-        payload = decode_jwt(creds.credentials, secret=settings.jwt_secret)
-        return int(payload["sub"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 class MeOut(BaseModel):
@@ -34,8 +22,9 @@ class MeOut(BaseModel):
 
 @router.get("", response_model=MeOut)
 def get_me(
+    request: Request,
     response: Response,
-    user_id: int = Depends(require_user_id),
+    user_id: int = Depends(require_user_id_dep),
     db: Session = Depends(get_db),
 ) -> MeOut:
     """Данные текущего пользователя. connected_ton_address хранится в БД и синхронизируется между устройствами."""
@@ -52,7 +41,9 @@ def get_me(
 
 @router.get("/balances")
 def my_balances(
-    user_id: int = Depends(require_user_id),
+    request: Request,
+    response: Response,
+    user_id: int = Depends(require_user_id_dep),
     db: Session = Depends(get_db),
 ):
     """Балансы пользователя из БД (обновляются при зачислении депозитов через TON webhook)."""
@@ -72,7 +63,9 @@ class DepositInstructionOut(BaseModel):
 
 @router.get("/deposit-instruction", response_model=DepositInstructionOut)
 def deposit_instruction(
-    user_id: int = Depends(require_user_id),
+    request: Request,
+    response: Response,
+    user_id: int = Depends(require_user_id_dep),
 ) -> DepositInstructionOut:
     """Адрес кошелька проекта и уникальный comment для атрибуции депозита (vision: один кошелёк + comment)."""
     address = settings.deposit_wallet_address or ""
@@ -97,7 +90,9 @@ class WalletConnectIn(BaseModel):
 @router.post("/wallet")
 def connect_wallet(
     body: WalletConnectIn,
-    user_id: int = Depends(require_user_id),
+    request: Request,
+    response: Response,
+    user_id: int = Depends(require_user_id_dep),
     db: Session = Depends(get_db),
 ):
     """Привязать TON-кошелёк (адрес получен через TON Connect на клиенте)."""
@@ -113,7 +108,9 @@ def connect_wallet(
 
 @router.delete("/wallet")
 def disconnect_wallet(
-    user_id: int = Depends(require_user_id),
+    request: Request,
+    response: Response,
+    user_id: int = Depends(require_user_id_dep),
     db: Session = Depends(get_db),
 ):
     """Отвязать TON-кошелёк."""
@@ -137,7 +134,9 @@ class WithdrawIn(BaseModel):
 @router.post("/withdraw")
 def create_withdraw(
     body: WithdrawIn,
-    user_id: int = Depends(require_user_id),
+    request: Request,
+    response: Response,
+    user_id: int = Depends(require_user_id_dep),
     db: Session = Depends(get_db),
 ):
     """Создать заявку на вывод. Проверка баланса, списание, запись в withdrawals и ledger. On-chain — заглушка (status pending)."""
@@ -192,7 +191,9 @@ def create_withdraw(
 
 @router.get("/withdrawals")
 def list_withdrawals(
-    user_id: int = Depends(require_user_id),
+    request: Request,
+    response: Response,
+    user_id: int = Depends(require_user_id_dep),
     db: Session = Depends(get_db),
 ):
     """Список заявок на вывод пользователя."""

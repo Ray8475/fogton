@@ -211,7 +211,7 @@
         const btn = document.querySelector('.nav-tab[data-tab="' + tabId + '"]');
         if (section) section.classList.remove("hidden");
         if (btn) btn.classList.add("active");
-        if (tabId === "wallet" && token) {
+        if (tabId === "wallet") {
           api("/me").then((meData) => renderConnectedWallet(meData)).catch(() => {});
         }
       }
@@ -221,15 +221,12 @@
       });
       showTab("home");
 
-      let token = null;
-
       const API_RETRIES = 4;
       const API_RETRY_DELAY_MS = 2000;
 
       async function api(path, opts = {}) {
         const { timeoutMs: _tm, ...fetchOpts } = opts;
         const headers = Object.assign({}, fetchOpts.headers || {});
-        if (token) headers["Authorization"] = `Bearer ${token}`;
         if (opts.json) {
           headers["Content-Type"] = "application/json";
           fetchOpts.body = JSON.stringify(opts.json);
@@ -238,7 +235,7 @@
         let lastError = null;
         for (let attempt = 1; attempt <= API_RETRIES; attempt++) {
           try {
-            const res = await fetch(url, { ...fetchOpts, headers });
+            const res = await fetch(url, { ...fetchOpts, headers, credentials: 'include' });
             const txt = await res.text();
             let data;
             try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
@@ -364,7 +361,7 @@
           uiOptions: uiOpts,
         });
         tonConnectUI.onStatusChange((data) => {
-          if (data && data.account && token) {
+          if (data && data.account) {
             api("/me/wallet", { method: "POST", json: { address: data.account.address } })
               .then(() => api("/me"))
               .then((meData) => renderConnectedWallet(meData))
@@ -491,8 +488,8 @@
           if (!initData) throw new Error("initData пустой.");
 
           statusEl.textContent = "Загрузка…";
-          const out = await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
-          token = out.token;
+          await api("/auth/telegram", { method: "POST", json: { init_data: initData } });
+          // Cookies устанавливаются автоматически сервером
           
           loadingScreen.classList.add("hidden");
           appRoot.classList.remove("hidden");
