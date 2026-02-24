@@ -5,11 +5,11 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth_deps import require_user_id_dep
 from app.db.database import get_db
-from app.db.models import Balance, FuturesContract, LedgerEntry, Market
+from app.db.models import Balance, FuturesContract, LedgerEntry, Market, Gift, Expiry
 
 
 router = APIRouter(prefix="/futures", tags=["futures"])
@@ -36,6 +36,18 @@ class TakeOfferIn(BaseModel):
 
 class SettleIn(BaseModel):
     close_price: str | None = None
+
+
+class MyContractOut(BaseModel):
+    id: int
+    market_id: int
+    side: str
+    qty: str
+    entry_price: str
+    status: str
+    role: str  # emitter | buyer
+    gift: str
+    expiry_days: int | None = None
 
 
 def _get_ton_balance(db: Session, user_id: int) -> Balance:
@@ -273,4 +285,41 @@ def settle_contract(
         entry_price=str(contract.entry_price),
         status=contract.status,
     )
+
+
+@router.get("/my", response_model=list[MyContractOut])
+def my_contracts(
+    user_id: int = Depends(require_user_id_dep),
+    db: Session = Depends(get_db),
+) -> list[MyContractOut]:
+    """Список контрактов текущего пользователя (как эмитента, так и покупателя)."""
+    rows = (
+        db.query(FuturesContract)
+        .options(joinedload(FuturesContract.market).joinedload(Market.gift), joinedload(FuturesContract.market).joinedload(Market.expiry))
+        .filter(
+            (FuturesContract.emitter_id == user_id)
+            | (FuturesContract.buyer_id == user_id)
+        )
+        .all()
+    )
+    out: list[MyContractOut] = []
+    for c in rows:
+        market = c.market
+        gift_name = market.gift.name if market and market.gift else ""
+        expiry_days = market.expiry.days if market and market.expiry else None
+        role = "emitter" if c.emitter_id == user_id else "buyer"
+        out.append(
+            MyContractOut(
+                id=c.id,
+                market_id=c.market_id,
+                side=c.side,
+                qty=str(c.qty),
+                entry_price=str(c.entry_price),
+                status=c.status,
+                role=role,
+                gift=gift_name,
+                expiry_days=expiry_days,
+            )
+        )
+    return out
 

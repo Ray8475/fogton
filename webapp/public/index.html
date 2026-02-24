@@ -116,6 +116,14 @@
             <div class="text-xs tg-hint">Загрузка...</div>
           </div>
         </div>
+        <div class="rounded-xl p-4 space-y-3 tg-card">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold tg-text">Мои контракты</h2>
+          </div>
+          <div id="contracts" class="text-sm space-y-2 tg-text">
+            <div class="text-xs tg-hint">Загрузка...</div>
+          </div>
+        </div>
       </div>
 
       <!-- Профиль -->
@@ -433,9 +441,68 @@
           }
           meta.innerHTML = `<span>${left}</span>${priceText ? `<span class="tabular-nums">${priceText}</span>` : ""}`;
 
+          const actions = document.createElement("div");
+          actions.className = "flex gap-2 mt-1";
+          if (m.price_ton != null) {
+            const btnLong = document.createElement("button");
+            btnLong.type = "button";
+            btnLong.className = "rounded-lg px-2 py-1 text-[11px] tg-btn";
+            btnLong.textContent = "Купить лонг";
+            btnLong.addEventListener("click", () => {
+              const qty = prompt("Количество подарков для лонга:");
+              if (!qty) return;
+              api("/futures/offers", { method: "POST", json: { market_id: m.id, side: "long", qty } })
+                .then(() => {
+                  alert("Заявка (лонг) создана.");
+                  loadData();
+                })
+                .catch((err) => alert(err && err.message ? err.message : "Ошибка создания лонг-заявки."));
+            });
+            const btnShort = document.createElement("button");
+            btnShort.type = "button";
+            btnShort.className = "rounded-lg px-2 py-1 text-[11px] tg-btn";
+            btnShort.textContent = "Купить шорт";
+            btnShort.addEventListener("click", () => {
+              const qty = prompt("Количество подарков для шорта:");
+              if (!qty) return;
+              api("/futures/offers", { method: "POST", json: { market_id: m.id, side: "short", qty } })
+                .then(() => {
+                  alert("Заявка (шорт) создана.");
+                  loadData();
+                })
+                .catch((err) => alert(err && err.message ? err.message : "Ошибка создания шорт-заявки."));
+            });
+            actions.appendChild(btnLong);
+            actions.appendChild(btnShort);
+          }
+
           card.appendChild(title);
           card.appendChild(meta);
+          if (actions.childElementCount > 0) {
+            card.appendChild(actions);
+          }
           listEl.appendChild(card);
+        });
+      }
+
+      function renderContracts(contracts) {
+        const el = document.getElementById("contracts");
+        if (!el) return;
+        const items = Array.isArray(contracts) ? contracts : [];
+        if (!items.length) {
+          el.innerHTML = "<div class=\"text-xs tg-hint\">Контрактов пока нет.</div>";
+          return;
+        }
+        el.innerHTML = "";
+        items.forEach((c) => {
+          const card = document.createElement("div");
+          card.className = "rounded-lg px-3 py-2 text-xs";
+          card.style.background = "var(--bg-color)";
+          card.style.border = "1px solid var(--header-bg-color)";
+          const sideLabel = c.side === "long" ? "Лонг" : "Шорт";
+          const roleLabel = c.role === "emitter" ? "эмитент" : "покупатель";
+          card.innerHTML = `<div class="flex justify-between gap-2"><span class="font-medium tg-text">${c.gift || "Подарок"} — ${sideLabel}</span><span class="tg-hint">${c.status}</span></div><div class="tg-hint mt-0.5">Роль: ${roleLabel}</div><div class="tg-hint mt-0.5">Объём: ${c.qty}, вход: ${c.entry_price}</div>`;
+          el.appendChild(card);
         });
       }
 
@@ -451,12 +518,14 @@
         const balancesEl = document.getElementById("balances");
         const marketsEl = document.getElementById("markets");
         const withdrawalsEl = document.getElementById("withdrawalsList");
+        const contractsEl = document.getElementById("contracts");
 
-        const [meResult, balancesResult, marketsResult, withdrawalsResult] = await Promise.allSettled([
+        const [meResult, balancesResult, marketsResult, withdrawalsResult, futuresResult] = await Promise.allSettled([
           api("/me"),
           api("/me/balances"),
           api("/markets"),
           api("/me/withdrawals"),
+          api("/futures/my"),
         ]);
 
         if (meResult.status === "fulfilled") {
@@ -479,6 +548,11 @@
           renderWithdrawals(withdrawalsResult.value);
         } else if (withdrawalsEl) {
           withdrawalsEl.innerHTML = "<p class=\"text-xs tg-hint\">Не удалось загрузить заявки.</p>";
+        }
+        if (futuresResult.status === "fulfilled") {
+          renderContracts(futuresResult.value);
+        } else if (contractsEl) {
+          contractsEl.innerHTML = "<p class=\"text-xs tg-hint\">Не удалось загрузить контракты.</p>";
         }
       }
 
