@@ -45,6 +45,9 @@ class Market(Base):
     gift_id: Mapped[int] = mapped_column(ForeignKey("gifts.id"), nullable=False)
     expiry_id: Mapped[int] = mapped_column(ForeignKey("expiries.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Текущие курсы подарка (см. Итерация 8: курсы подарков и рынки фьючерсов, источник — @gift_charts_bot)
+    price_ton: Mapped[Decimal | None] = mapped_column(Numeric(36, 18), nullable=True)
+    price_usdt: Mapped[Decimal | None] = mapped_column(Numeric(36, 18), nullable=True)
 
     gift: Mapped["Gift"] = relationship("Gift", foreign_keys=[gift_id])
     expiry: Mapped["Expiry"] = relationship("Expiry", foreign_keys=[expiry_id])

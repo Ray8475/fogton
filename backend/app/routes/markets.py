@@ -30,11 +30,15 @@ def list_markets(db: Session = Depends(get_db)):
             name = gift.name
             days = expiry.days
             symbol = f"{name.upper().replace(' ', '_')[:16]}-{days}D"
+            price_ton = str(m.price_ton) if m.price_ton is not None else None
+            price_usdt = str(m.price_usdt) if m.price_usdt is not None else None
             markets.append({
                 "id": m.id,
                 "gift": name,
                 "expiry_days": days,
                 "symbol": symbol,
+                "price_ton": price_ton,
+                "price_usdt": price_usdt,
                 "active": True,
             })
     return {"markets": markets}

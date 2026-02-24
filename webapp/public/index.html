@@ -422,11 +422,16 @@
           title.innerHTML = `<span class="font-medium tg-text">${m.gift || m.name || m.symbol || "Маркет"}</span>${activeBadge}`;
 
           const meta = document.createElement("div");
-          meta.className = "text-[11px] tg-hint";
-          const base = m.base || m.base_currency || "";
-          const quote = m.quote || m.quote_currency || "";
+          meta.className = "text-[11px] tg-hint flex justify-between gap-2";
           const expiryDays = m.expiry_days != null ? m.expiry_days : "";
-          meta.textContent = base && quote ? `${base}/${quote}` : (expiryDays !== "" ? `Экспирация: ${expiryDays} дн.` : (m.description || ""));
+          const left = expiryDays !== "" ? `Экспирация: ${expiryDays} дн.` : (m.description || "");
+          let priceText = "";
+          if (m.price_ton != null) {
+            priceText = `${m.price_ton} TON`;
+          } else if (m.price_usdt != null) {
+            priceText = `${m.price_usdt} USDT`;
+          }
+          meta.innerHTML = `<span>${left}</span>${priceText ? `<span class="tabular-nums">${priceText}</span>` : ""}`;
 
           card.appendChild(title);
           card.appendChild(meta);

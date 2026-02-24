@@ -45,14 +45,23 @@ def create_app() -> FastAPI:
 
     Base.metadata.create_all(bind=engine)
 
-    # Добавить колонку connected_ton_address в существующие БД (миграция без Alembic)
+    # Простые миграции для SQLite (без Alembic)
     if "sqlite" in (settings.database_url or ""):
         with engine.connect() as conn:
+            # users.connected_ton_address
             r = conn.execute(text("PRAGMA table_info(users)"))
             columns = [row[1] for row in r.fetchall()]
             if "connected_ton_address" not in columns:
                 conn.execute(text("ALTER TABLE users ADD COLUMN connected_ton_address VARCHAR(68) NULL"))
                 conn.commit()
+            # markets.price_ton, markets.price_usdt
+            r2 = conn.execute(text("PRAGMA table_info(markets)"))
+            m_columns = [row[1] for row in r2.fetchall()]
+            if "price_ton" not in m_columns:
+                conn.execute(text("ALTER TABLE markets ADD COLUMN price_ton NUMERIC"))
+            if "price_usdt" not in m_columns:
+                conn.execute(text("ALTER TABLE markets ADD COLUMN price_usdt NUMERIC"))
+            conn.commit()
 
     app.include_router(health_router)
     # Онбординг Mini App: auth + /me + markets
