@@ -143,3 +143,27 @@ class Trade(Base):
     fee_amount: Mapped[Decimal | None] = mapped_column(Numeric(36, 18), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
+
+# --- Фьючерсные контракты на подарки (итерация 9) ---
+
+
+class FuturesContract(Base):
+    __tablename__ = "futures_contracts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    market_id: Mapped[int] = mapped_column(ForeignKey("markets.id"), nullable=False)
+    emitter_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)  # кто выставил предложение
+    buyer_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)  # кто принял контракт
+    side: Mapped[str] = mapped_column(String(8), nullable=False)  # long | short
+    qty: Mapped[Decimal] = mapped_column(Numeric(36, 18), nullable=False)  # количество базового актива (подарков)
+    entry_price: Mapped[Decimal] = mapped_column(Numeric(36, 18), nullable=False)  # цена при входе (из price_ton)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")  # open | taken | closed | liquidated
+    margin_emitter: Mapped[Decimal] = mapped_column(Numeric(36, 18), nullable=False, default=Decimal("0"))
+    margin_buyer: Mapped[Decimal] = mapped_column(Numeric(36, 18), nullable=False, default=Decimal("0"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    close_price: Mapped[Decimal | None] = mapped_column(Numeric(36, 18), nullable=True)
+    liquidation_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    market: Mapped["Market"] = relationship("Market", foreign_keys=[market_id])
+
