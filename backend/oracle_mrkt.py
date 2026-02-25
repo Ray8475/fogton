@@ -3,15 +3,15 @@ from __future__ import annotations
 """
 Простейший «оракул» цен подарков под MRKT / TON:
 
-- Берёт floor-прайсы подарков через TON API (tonapi.io, метод getItemsFromCollection).
+- Берёт floor-прайсы подарков по аккаунту MRKT Bank через TON API (tonapi.io).
 - Конвертирует nanoTON → TON.
 - Шлёт их в наш backend через POST /admin/markets/prices/bulk.
 
 Это отдельный скрипт, НЕ часть FastAPI — его можно запускать по cron/systemd.
 
 ВАЖНО:
-- здесь зашита только структура; реальные адреса коллекций MRKT/TON и,
-  при необходимости, точные параметры tonapi, нужно заполнить руками.
+- требуется адрес кошелька MRKT (владелец NFT-подарков) в переменной MRKT_OWNER_ADDRESS;
+- названия подарков должны совпадать с тем, как они приходят в metadata.name из TonAPI.
 """
 
 import os
@@ -28,14 +28,14 @@ TONAPI_API_KEY = os.getenv("TONAPI_API_KEY", "")  # опционально
 
 BACKEND_BASE = os.getenv("BACKEND_BASE_URL", "https://api.fogton.ru")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+MRKT_OWNER_ADDRESS = os.getenv("MRKT_OWNER_ADDRESS", "")
 
-# Соответствие: имя подарка → адрес коллекции в TON (MRKT/Portals и т.п.)
-# TODO: заполнить реальными адресами коллекций
-GIFT_COLLECTIONS: Dict[str, str] = {
-    "Plush Pepe": "<TON_COLLECTION_ADDRESS_PLUSH_PEPE>",
-    "Durov's Cap": "<TON_COLLECTION_ADDRESS_DUROVS_CAP>",
-    "Heart Locket": "<TON_COLLECTION_ADDRESS_HEART_LOCKET>",
-}
+# Какие подарки отслеживаем (по metadata.name)
+TRACKED_GIFTS: List[str] = [
+    "Plush Pepe",
+    "Durov's Cap",
+    "Heart Locket",
+]
 
 POLL_INTERVAL_SECONDS = int(os.getenv("ORACLE_POLL_INTERVAL", "60"))
 
@@ -53,64 +53,61 @@ def _tonapi_headers() -> Dict[str, str]:
     return h
 
 
-def fetch_floor_price_for_collection(collection_address: str) -> Optional[Decimal]:
+def collect_gift_prices() -> List[GiftPrice]:
     """
-    Берём список NFT из коллекции через TonAPI и ищем минимальную цену (floor).
-
-    Основано на документации TonAPI getItemsFromCollection:
-    - каждая NFT имеет поле sale.price.value (в nanoTON), если она выставлена на продажу.
-
-    Если активных продаж нет — возвращаем None.
+    Обходит все NFT на аккаунте MRKT_OWNER_ADDRESS и собирает floor-прайсы
+    для отслеживаемых подарков по их имени (metadata.name).
     """
-    # Примерный URL; при необходимости скорректировать под актуальный TonAPI.
-    url = f"{TONAPI_BASE}/v2/nfts/collections/{collection_address}/items"
+    if not MRKT_OWNER_ADDRESS:
+        raise RuntimeError("MRKT_OWNER_ADDRESS is not set")
+
+    url = f"{TONAPI_BASE}/v2/accounts/{MRKT_OWNER_ADDRESS}/nfts"
     params = {
-        "limit": 200,
+        "limit": 1000,
         "offset": 0,
     }
-    resp = requests.get(url, headers=_tonapi_headers(), params=params, timeout=10)
+    resp = requests.get(url, headers=_tonapi_headers(), params=params, timeout=15)
     resp.raise_for_status()
     data = resp.json()
 
     items: List[Dict[str, Any]] = data.get("nft_items") or data.get("items") or []
-    prices: List[Decimal] = []
+    prices_by_gift: Dict[str, List[Decimal]] = {name: [] for name in TRACKED_GIFTS}
+
     for item in items:
+        meta = item.get("metadata") or item.get("content") or {}
+        name = (meta.get("name") or meta.get("nft_name") or "").strip()
+        if not name:
+            continue
+
+        # ищем трекаемый подарок по префиксу имени
+        gift_name_match: Optional[str] = None
+        for g_name in TRACKED_GIFTS:
+            if name.startswith(g_name):
+                gift_name_match = g_name
+                break
+        if not gift_name_match:
+            continue
+
         sale = item.get("sale") or {}
         price = sale.get("price") or {}
         value = price.get("value")
         token_name = price.get("token_name") or price.get("token") or ""
         if not value or not token_name:
             continue
-        # Нас интересуют цены в TON
         if str(token_name).upper() not in ("TON", "JETTON"):
             continue
         try:
-            # TonAPI обычно отдаёт nanoTON; делим на 1e9
             nano = Decimal(str(value))
-            prices.append(nano / Decimal("1e9"))
+            ton = nano / Decimal("1e9")
+            prices_by_gift[gift_name_match].append(ton)
         except Exception:
             continue
 
-    if not prices:
-        return None
-    return min(prices)
-
-
-def collect_gift_prices() -> List[GiftPrice]:
-    """Обходит все подарки из GIFT_COLLECTIONS и собирает floor-прайсы."""
     result: List[GiftPrice] = []
-    for gift_name, coll in GIFT_COLLECTIONS.items():
-        if not coll or coll.startswith("<TON_COLLECTION_ADDRESS"):
-            # коллекция ещё не настроена
+    for gift_name, plist in prices_by_gift.items():
+        if not plist:
             continue
-        try:
-            price = fetch_floor_price_for_collection(coll)
-        except Exception as e:
-            print(f"[oracle] error fetching price for {gift_name}: {e}")
-            continue
-        if price is None:
-            continue
-        result.append(GiftPrice(gift_name=gift_name, price_ton=price))
+        result.append(GiftPrice(gift_name=gift_name, price_ton=min(plist)))
     return result
 
 
