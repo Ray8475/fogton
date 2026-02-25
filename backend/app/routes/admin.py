@@ -205,3 +205,87 @@ def adjust_balance(
         "new_available": str(balance.available),
         "reason": body.reason,
     }
+
+
+# --- Обновление цен рынков (для внешнего оракула) ---
+
+
+class MarketPriceItem(BaseModel):
+    gift_name: str | None = None
+    market_id: int | None = None
+    price_ton: str | None = None
+    price_usdt: str | None = None
+
+
+@router.post("/markets/prices/bulk")
+def bulk_update_market_prices(
+    items: list[MarketPriceItem],
+    _: None = Depends(require_admin_token),
+    db: Session = Depends(get_db),
+):
+    """
+    Пакетное обновление цен рынков.
+
+    Предназначено для внешнего сервиса-оракула, который собирает цены с маркетплейсов
+    (Portals, MRKT, Tonnel и т.п.) и пушит их сюда.
+
+    Формат тела:
+    [
+      { "gift_name": "Plush Pepe", "price_ton": "1.23" },
+      { "market_id": 1, "price_ton": "4.56", "price_usdt": "2.34" }
+    ]
+
+    - Если указан market_id — обновляется конкретный рынок.
+    - Если указан gift_name — обновляются все активные рынки для этого подарка.
+    """
+    if not items:
+        raise HTTPException(status_code=400, detail="Empty payload")
+
+    updated = 0
+    for item in items:
+        if item.price_ton is None and item.price_usdt is None:
+            continue
+
+        # Парсим Decimal
+        price_ton_dec: Decimal | None = None
+        price_usdt_dec: Decimal | None = None
+        try:
+            if item.price_ton is not None:
+                price_ton_dec = Decimal(item.price_ton)
+            if item.price_usdt is not None:
+                price_usdt_dec = Decimal(item.price_usdt)
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Invalid price format for item {item}")
+
+        q = db.query(Market)
+        if item.market_id is not None:
+            q = q.filter(Market.id == item.market_id)
+        elif item.gift_name:
+            q = q.join(Gift, Gift.id == Market.gift_id).filter(Gift.name == item.gift_name)
+        else:
+            continue
+
+        markets = q.all()
+        if not markets:
+            continue
+
+        for m in markets:
+            if price_ton_dec is not None:
+                m.price_ton = price_ton_dec
+            if price_usdt_dec is not None:
+                m.price_usdt = price_usdt_dec
+            updated += 1
+
+    if updated == 0:
+        return {"updated": 0}
+
+    db.commit()
+    logger.info(
+        "Markets prices bulk updated",
+        extra={
+            "event": "admin_markets_price_bulk_updated",
+            "updated": updated,
+            "items_count": len(items),
+        },
+    )
+    return {"updated": updated}
