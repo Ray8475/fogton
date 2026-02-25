@@ -31,17 +31,19 @@ if %errorlevel% equ 0 (
 )
 
 echo Starting API (uvicorn) on http://0.0.0.0:8000 ...
-REM Запускаем из корня, чтобы все процессы использовали один и тот же app.db в корне
 REM /k чтобы окно не закрывалось сразу при ошибке
-start "api" /D "%ROOT%" cmd /k python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
+REM Запускаем из backend, чтобы сработали импорты вида "from app..."
+start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
 
 echo Seeding base gifts and markets (Plush Pepe / Durov's Cap / Heart Locket) ...
 REM Однократный сидинг справочников подарков и рынков
-start "seed_markets" /D "%ROOT%" cmd /c python backend\seed_markets.py ^&^& pause
+REM Запускаем из backend, чтобы API и сидер использовали один и тот же backend\app.db
+start "seed_markets" /D "%ROOT%\backend" cmd /c python seed_markets.py ^&^& pause
 
 echo Running one-time gifts sync from Thermos Proxy ...
 REM Однократная синхронизация справочника gifts из Thermos Proxy API
-start "sync_gifts" /D "%ROOT%" cmd /c python backend\sync_gifts_from_thermos.py ^&^& pause
+REM Запускаем из backend, чтобы sync и API использовали один и тот же backend\app.db
+start "sync_gifts" /D "%ROOT%\backend" cmd /c python sync_gifts_from_thermos.py ^&^& pause
 
 echo Starting bot (run_bot.py) ...
 REM /k чтобы видеть traceback, если бот упадёт
@@ -65,7 +67,8 @@ if "%TUNNEL_TOKEN%"=="" (
 echo Starting price oracle (Thermos Proxy -> backend) ...
 REM Оракул цен подарков: Thermos Proxy -> /admin/markets/prices/bulk
 REM Для локальной разработки шлём цены прямо в http://127.0.0.1:8000 (uvicorn)
-start "oracle" /D "%ROOT%" cmd /k "set BACKEND_BASE_URL=http://127.0.0.1:8000 && python backend\oracle_mrkt.py"
+REM Запускаем из backend, чтобы oracle и API использовали один и тот же backend\app.db
+start "oracle" /D "%ROOT%\backend" cmd /k "set BACKEND_BASE_URL=http://127.0.0.1:8000 && python oracle_mrkt.py"
 
 echo.
 echo All components started (check separate windows for logs).
