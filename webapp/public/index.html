@@ -95,7 +95,7 @@
         <p class="text-sm tg-hint mb-3" id="status">Загрузка…</p>
         <button id="btnRetry" type="button" class="hidden rounded-lg px-4 py-2 text-sm font-medium tg-btn">Повторить</button>
       </div>
-    </div>
+      </div>
 
     <!-- Основной экран после успешной авторизации -->
     <div id="appRoot" class="max-w-xl mx-auto p-4 pb-20 space-y-4 hidden">
@@ -288,8 +288,8 @@
       });
       showTab("home");
 
-      const API_RETRIES = 4;
-      const API_RETRY_DELAY_MS = 2000;
+      const API_RETRIES = 2;
+      const API_RETRY_DELAY_MS = 1500;
 
       async function api(path, opts = {}) {
         const { timeoutMs: _tm, ...fetchOpts } = opts;
@@ -303,9 +303,9 @@
         for (let attempt = 1; attempt <= API_RETRIES; attempt++) {
           try {
             const res = await fetch(url, { ...fetchOpts, headers, credentials: 'include' });
-            const txt = await res.text();
-            let data;
-            try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+        const txt = await res.text();
+        let data;
+        try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
             if (!res.ok) {
               lastError = new Error(data.detail || `HTTP ${res.status}`);
               if (res.status === 401 && path !== "/auth/telegram" && tg?.initData && !opts._retriedSession) {
@@ -329,7 +329,7 @@
               if (res.status === 401) lastError = new Error("Сессия истекла. Откройте приложение снова.");
               throw lastError;
             }
-            return data;
+        return data;
           } catch (e) {
             lastError = e;
             const isRetryable = e.message === "Failed to fetch" ||
@@ -533,7 +533,16 @@
       function setSectionError(elId, message) {
         const el = document.getElementById(elId);
         if (el) {
-          el.innerHTML = `<div class="text-xs tg-hint">Ошибка загрузки: ${message}</div>`;
+          let msg = message || "Не удалось загрузить";
+          const lower = (msg + "").toLowerCase();
+          if (
+            lower.includes("failed to fetch") ||
+            lower.includes("networkerror") ||
+            lower.includes("typeerror")
+          ) {
+            msg = "Нет связи с сервером. Попробуйте обновить чуть позже.";
+          }
+          el.innerHTML = `<div class="text-xs tg-hint">Ошибка загрузки: ${msg}</div>`;
         }
       }
 
