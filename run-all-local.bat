@@ -63,7 +63,8 @@ if "%TUNNEL_TOKEN%"=="" (
 
 echo Starting price oracle (Thermos Proxy -> backend) ...
 REM Оракул цен подарков: Thermos Proxy -> /admin/markets/prices/bulk
-start "oracle" /D "%ROOT%" cmd /k python backend\oracle_mrkt.py
+REM Для локальной разработки шлём цены прямо в http://127.0.0.1:8000 (uvicorn)
+start "oracle" /D "%ROOT%" cmd /k "set BACKEND_BASE_URL=http://127.0.0.1:8000 && python backend\oracle_mrkt.py"
 
 echo.
 echo All components started (check separate windows for logs).
