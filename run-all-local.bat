@@ -31,8 +31,9 @@ if %errorlevel% equ 0 (
 )
 
 echo Starting API (uvicorn) on http://0.0.0.0:8000 ...
+REM Запускаем из корня, чтобы все процессы использовали один и тот же app.db в корне
 REM /k чтобы окно не закрывалось сразу при ошибке
-start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
+start "api" /D "%ROOT%" cmd /k python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
 
 echo Seeding base gifts and markets (Plush Pepe / Durov's Cap / Heart Locket) ...
 REM Однократный сидинг справочников подарков и рынков
