@@ -34,6 +34,10 @@ echo Starting API (uvicorn) on http://0.0.0.0:8000 ...
 REM /k чтобы окно не закрывалось сразу при ошибке
 start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
 
+echo Running one-time gifts sync from Thermos Proxy ...
+REM Однократная синхронизация справочника gifts из Thermos Proxy API
+start "sync_gifts" /D "%ROOT%" cmd /c python backend\sync_gifts_from_thermos.py ^&^& pause
+
 echo Starting bot (run_bot.py) ...
 REM /k чтобы видеть traceback, если бот упадёт
 start "bot" /D "%ROOT%" cmd /k python run_bot.py
@@ -52,6 +56,10 @@ if "%TUNNEL_TOKEN%"=="" (
     REM В логах cloudflared нормальны сообщения "client disconnected" и "context canceled" — туннель сам переподключается (Retrying connection / Registered tunnel connection).
     start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel run --protocol http2 --token "%TUNNEL_TOKEN%"
 )
+
+echo Starting price oracle (Thermos Proxy -> backend) ...
+REM Оракул цен подарков: Thermos Proxy -> /admin/markets/prices/bulk
+start "oracle" /D "%ROOT%" cmd /k python backend\oracle_mrkt.py
 
 echo.
 echo All components started (check separate windows for logs).
