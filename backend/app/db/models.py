@@ -25,7 +25,9 @@ class Gift(Base):
     __tablename__ = "gifts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    name: Mapped[str] = mapped_column(String(256), nullable=False, unique=True)
+    image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    total_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 

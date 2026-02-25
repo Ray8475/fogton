@@ -62,6 +62,18 @@ def create_app() -> FastAPI:
                 conn.execute(text("ALTER TABLE markets ADD COLUMN price_ton NUMERIC"))
             if "price_usdt" not in m_columns:
                 conn.execute(text("ALTER TABLE markets ADD COLUMN price_usdt NUMERIC"))
+            # gifts.image_url, gifts.total_count, уникальность имени
+            r3 = conn.execute(text("PRAGMA table_info(gifts)"))
+            g_columns = [row[1] for row in r3.fetchall()]
+            if "image_url" not in g_columns:
+                conn.execute(text("ALTER TABLE gifts ADD COLUMN image_url VARCHAR(512) NULL"))
+            if "total_count" not in g_columns:
+                conn.execute(text("ALTER TABLE gifts ADD COLUMN total_count INTEGER NULL"))
+            # индекс уникальности по name, если его ещё нет
+            r4 = conn.execute(text("PRAGMA index_list(gifts)"))
+            idx_names = [row[1] for row in r4.fetchall()]
+            if "uq_gifts_name" not in idx_names:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_gifts_name ON gifts(name)"))
             conn.commit()
 
     app.include_router(health_router)
