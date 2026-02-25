@@ -449,7 +449,7 @@
             btnLong.className = "rounded-lg px-2 py-1 text-[11px] tg-btn";
             btnLong.textContent = "Купить лонг";
             btnLong.addEventListener("click", () => {
-              const qty = prompt("Количество подарков для лонга:");
+              const qty = prompt("Размер позиции (количество фьючерсов) для лонга:");
               if (!qty) return;
               api("/futures/offers", { method: "POST", json: { market_id: m.id, side: "long", qty } })
                 .then(() => {
@@ -463,7 +463,7 @@
             btnShort.className = "rounded-lg px-2 py-1 text-[11px] tg-btn";
             btnShort.textContent = "Купить шорт";
             btnShort.addEventListener("click", () => {
-              const qty = prompt("Количество подарков для шорта:");
+              const qty = prompt("Размер позиции (количество фьючерсов) для шорта:");
               if (!qty) return;
               api("/futures/offers", { method: "POST", json: { market_id: m.id, side: "short", qty } })
                 .then(() => {
