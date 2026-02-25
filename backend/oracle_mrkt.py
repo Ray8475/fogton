@@ -17,7 +17,8 @@ import time
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Dict, List
-
+from dotenv import load_dotenv
+load_dotenv()
 import requests
 
 
@@ -25,7 +26,9 @@ import requests
 PROXY_BASE = os.getenv("THERMOS_PROXY_BASE_URL", "https://proxy.thermos.gifts")
 
 # Наш backend
-BACKEND_BASE = os.getenv("BACKEND_BASE_URL", "https://api.fogton.ru")
+# Стрипуем пробелы и завершающий слеш, чтобы не получить "http://...8000 /path"
+BACKEND_BASE_RAW = os.getenv("BACKEND_BASE_URL", "https://api.fogton.ru") or ""
+BACKEND_BASE = BACKEND_BASE_RAW.strip().rstrip("/")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 
 # Какие подарки отслеживаем (по имени коллекции в Thermos Proxy)
