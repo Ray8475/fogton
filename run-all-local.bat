@@ -34,6 +34,10 @@ echo Starting API (uvicorn) on http://0.0.0.0:8000 ...
 REM /k чтобы окно не закрывалось сразу при ошибке
 start "api" /D "%ROOT%\backend" cmd /k python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75
 
+echo Seeding base gifts and markets (Plush Pepe / Durov's Cap / Heart Locket) ...
+REM Однократный сидинг справочников подарков и рынков
+start "seed_markets" /D "%ROOT%" cmd /c python backend\seed_markets.py ^&^& pause
+
 echo Running one-time gifts sync from Thermos Proxy ...
 REM Однократная синхронизация справочника gifts из Thermos Proxy API
 start "sync_gifts" /D "%ROOT%" cmd /c python backend\sync_gifts_from_thermos.py ^&^& pause
