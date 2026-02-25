@@ -1,36 +1,34 @@
 from __future__ import annotations
 
 """
-Простейший «оракул» цен подарков под MRKT / TON:
+Простейший «оракул» цен подарков через Thermos Proxy API.
 
-- Берёт floor-прайсы подарков по аккаунту MRKT Bank через TON API (tonapi.io).
-- Конвертирует nanoTON → TON.
+- Берёт floor-прайсы подарков из Thermos Proxy:
+  GET https://proxy.thermos.gifts/api/v1/collections
+- Конвертирует floor (строка в nanoton) → Decimal TON.
 - Шлёт их в наш backend через POST /admin/markets/prices/bulk.
 
-Это отдельный скрипт, НЕ часть FastAPI — его можно запускать по cron/systemd.
-
-ВАЖНО:
-- требуется адрес кошелька MRKT (владелец NFT-подарков) в переменной MRKT_OWNER_ADDRESS;
-- названия подарков должны совпадать с тем, как они приходят в metadata.name из TonAPI.
+Это отдельный скрипт, НЕ часть FastAPI — его можно запускать по cron/systemd
+или просто в отдельном терминале во время разработки.
 """
 
 import os
 import time
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import requests
 
 
-TONAPI_BASE = os.getenv("TONAPI_BASE_URL", "https://tonapi.io")
-TONAPI_API_KEY = os.getenv("TONAPI_API_KEY", "")  # опционально
+# Thermos Proxy API (публичный)
+PROXY_BASE = os.getenv("THERMOS_PROXY_BASE_URL", "https://proxy.thermos.gifts")
 
+# Наш backend
 BACKEND_BASE = os.getenv("BACKEND_BASE_URL", "https://api.fogton.ru")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
-MRKT_OWNER_ADDRESS = os.getenv("MRKT_OWNER_ADDRESS", "")
 
-# Какие подарки отслеживаем (по metadata.name)
+# Какие подарки отслеживаем (по имени коллекции в Thermos Proxy)
 TRACKED_GIFTS: List[str] = [
     "Plush Pepe",
     "Durov's Cap",
@@ -46,68 +44,34 @@ class GiftPrice:
     price_ton: Decimal
 
 
-def _tonapi_headers() -> Dict[str, str]:
-    h: Dict[str, str] = {"Accept": "application/json"}
-    if TONAPI_API_KEY:
-        h["Authorization"] = f"Bearer {TONAPI_API_KEY}"
-    return h
-
-
 def collect_gift_prices() -> List[GiftPrice]:
     """
-    Обходит все NFT на аккаунте MRKT_OWNER_ADDRESS и собирает floor-прайсы
-    для отслеживаемых подарков по их имени (metadata.name).
+    Обходит коллекции в Thermos Proxy и собирает floor-прайсы
+    для отслеживаемых подарков по имени коллекции.
     """
-    if not MRKT_OWNER_ADDRESS:
-        raise RuntimeError("MRKT_OWNER_ADDRESS is not set")
-
-    url = f"{TONAPI_BASE}/v2/accounts/{MRKT_OWNER_ADDRESS}/nfts"
-    params = {
-        "limit": 1000,
-        "offset": 0,
-    }
-    resp = requests.get(url, headers=_tonapi_headers(), params=params, timeout=15)
+    url = f"{PROXY_BASE}/api/v1/collections"
+    resp = requests.get(url, timeout=15)
     resp.raise_for_status()
     data = resp.json()
 
-    items: List[Dict[str, Any]] = data.get("nft_items") or data.get("items") or []
-    prices_by_gift: Dict[str, List[Decimal]] = {name: [] for name in TRACKED_GIFTS}
+    collections: List[Dict[str, Any]] = data or []
+    result: List[GiftPrice] = []
 
-    for item in items:
-        meta = item.get("metadata") or item.get("content") or {}
-        name = (meta.get("name") or meta.get("nft_name") or "").strip()
-        if not name:
+    for col in collections:
+        name = (col.get("name") or "").strip()
+        if name not in TRACKED_GIFTS:
             continue
-
-        # ищем трекаемый подарок по префиксу имени
-        gift_name_match: Optional[str] = None
-        for g_name in TRACKED_GIFTS:
-            if name.startswith(g_name):
-                gift_name_match = g_name
-                break
-        if not gift_name_match:
-            continue
-
-        sale = item.get("sale") or {}
-        price = sale.get("price") or {}
-        value = price.get("value")
-        token_name = price.get("token_name") or price.get("token") or ""
-        if not value or not token_name:
-            continue
-        if str(token_name).upper() not in ("TON", "JETTON"):
+        stats = col.get("stats") or {}
+        floor = stats.get("floor")
+        if not floor:
             continue
         try:
-            nano = Decimal(str(value))
+            nano = Decimal(str(floor))
             ton = nano / Decimal("1e9")
-            prices_by_gift[gift_name_match].append(ton)
         except Exception:
             continue
+        result.append(GiftPrice(gift_name=name, price_ton=ton))
 
-    result: List[GiftPrice] = []
-    for gift_name, plist in prices_by_gift.items():
-        if not plist:
-            continue
-        result.append(GiftPrice(gift_name=gift_name, price_ton=min(plist)))
     return result
 
 
