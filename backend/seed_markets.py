@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 """
-Одноразовый скрипт для создания базовых подарков и рынков:
-- Plush Pepe
-- Durov's Cap
-- Heart Locket
+Одноразовый скрипт для создания рынков по всем подаркам из таблицы gifts.
 
 Использует текущую DATABASE_URL и модели SQLAlchemy.
 Запускать из корня проекта:
@@ -18,13 +15,6 @@ from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal, Base, engine
 from app.db.models import Gift, Expiry, Market
-
-
-GIFTS = [
-    "Plush Pepe",
-    "Durov's Cap",
-    "Heart Locket",
-]
 
 
 def main() -> None:
@@ -50,12 +40,10 @@ def main() -> None:
             db.add(expiry)
             db.flush()
 
-        for idx, name in enumerate(GIFTS, start=1):
-            gift = db.query(Gift).filter(Gift.name == name).first()
-            if gift is None:
-                gift = Gift(name=name, is_active=True)
-                db.add(gift)
-                db.flush()
+        # Берём все активные подарки и создаём по рынку на каждый (для expiry=7 дней)
+        gifts = db.query(Gift).filter(Gift.is_active == True).all()  # noqa: E712
+
+        for idx, gift in enumerate(gifts, start=1):
 
             market = (
                 db.query(Market)

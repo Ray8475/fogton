@@ -31,13 +31,6 @@ BACKEND_BASE_RAW = os.getenv("BACKEND_BASE_URL", "https://api.fogton.ru") or ""
 BACKEND_BASE = BACKEND_BASE_RAW.strip().rstrip("/")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 
-# Какие подарки отслеживаем (по имени коллекции в Thermos Proxy)
-TRACKED_GIFTS: List[str] = [
-    "Plush Pepe",
-    "Durov's Cap",
-    "Heart Locket",
-]
-
 POLL_INTERVAL_SECONDS = int(os.getenv("ORACLE_POLL_INTERVAL", "60"))
 
 
@@ -50,7 +43,7 @@ class GiftPrice:
 def collect_gift_prices() -> List[GiftPrice]:
     """
     Обходит коллекции в Thermos Proxy и собирает floor-прайсы
-    для отслеживаемых подарков по имени коллекции.
+    для подарков по имени коллекции.
     """
     url = f"{PROXY_BASE}/api/v1/collections"
     resp = requests.get(url, timeout=15)
@@ -62,7 +55,7 @@ def collect_gift_prices() -> List[GiftPrice]:
 
     for col in collections:
         name = (col.get("name") or "").strip()
-        if name not in TRACKED_GIFTS:
+        if not name:
             continue
         stats = col.get("stats") or {}
         floor = stats.get("floor")
