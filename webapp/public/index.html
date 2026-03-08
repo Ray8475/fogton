@@ -227,7 +227,11 @@
       const API_BASE = isLocal ? "http://127.0.0.1:8000" : "https://api.fogton.ru";
       // Абсолютный базовый URL для картинок — в WebView Telegram относительные пути иногда не подхватываются
       const ASSETS_BASE = location.origin || "";
-      const img = (path) => (ASSETS_BASE ? ASSETS_BASE + "/" + path.replace(/^\//, "") : path);
+      const img = (path) => {
+        if (path == null) return "";
+        const p = String(path);
+        return ASSETS_BASE ? ASSETS_BASE + "/" + p.replace(/^\//, "") : p;
+      };
 
       // Иконки навигации и модалки — абсолютные URL, чтобы в WebView бота картинки грузились
       document.querySelectorAll(".nav-icon[data-src]").forEach((el) => { el.src = img(el.getAttribute("data-src")); });
