@@ -35,10 +35,14 @@ def create_app() -> FastAPI:
 
     app.add_middleware(KeepAliveMiddleware)
 
-    # CORS: позволяем Mini App (GitHub Pages / app.fogton.ru) ходить в API
+    # CORS: позволяем Mini App (локально и по домену) ходить в API
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # для MVP можно ослабить, потом сузим до конкретных доменов
+        allow_origins=[
+            "http://127.0.0.1:5500",
+            "http://localhost:5500",
+            "https://app.fogton.ru",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

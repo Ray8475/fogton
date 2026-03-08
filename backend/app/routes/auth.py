@@ -78,7 +78,7 @@ def auth_telegram(
     cookie_options = {
         "httponly": True,
         "secure": True,
-        "samesite": "strict",
+        "samesite": "none",
         "path": "/",
     }
     response.set_cookie("ACCESS_TOKEN", access_token, max_age=settings.jwt_ttl_seconds, **cookie_options)
