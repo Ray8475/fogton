@@ -86,11 +86,10 @@
 Если туннель часто отваливается, используйте оптимизированные флаги при запуске cloudflared:
 
 ```powershell
-.\cloudflared.exe tunnel run --protocol auto --retries 10 --no-autoupdate --token <ваш-токен>
+.\cloudflared.exe tunnel run --protocol auto --no-autoupdate --token <ваш-токен>
 ```
 
 - **--protocol auto** — QUIC с fallback на HTTP/2; QUIC устойчивее к потере пакетов
-- **--retries 10** — больше попыток переподключения (по умолчанию 5)
 - **--no-autoupdate** — отключение проверок обновлений (на Windows и так не обновляется автоматически)
 
 Скрипты `run-all-local.bat`, `run-all-local.ps1` и `run-bot-retry.ps1` уже используют эти флаги.

@@ -41,7 +41,7 @@ foreach ($candidate in @("cloudflared.exe", (Join-Path $Root "cloudflared.exe"))
 if ($TunnelToken -and $cloudflaredExe) {
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Starting cloudflared tunnel in background..." -ForegroundColor Cyan
     $cloudflaredProcess = Start-Process -FilePath $cloudflaredExe -ArgumentList @(
-        "tunnel", "run", "--protocol", "auto", "--retries", "10", "--no-autoupdate", "--token", $TunnelToken
+        "tunnel", "run", "--protocol", "auto", "--no-autoupdate", "--token", $TunnelToken
     ) -WindowStyle Hidden -PassThru
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Tunnel PID: $($cloudflaredProcess.Id). Waiting $TunnelStartDelaySeconds s..." -ForegroundColor Gray
     Start-Sleep -Seconds $TunnelStartDelaySeconds
