@@ -117,9 +117,9 @@ WEBAPP_URL=https://app.ваш-домен.com
 
 **Вариант A — без скрипта (ручной запуск):**
 
-1. В одном терминале запустите туннель (рекомендуемые флаги для стабильности: `--protocol auto`, `--no-autoupdate`):
+1. В одном терминале запустите туннель (рекомендуемые флаги для стабильности: `--protocol auto`, `--retries 10`, `--no-autoupdate`):
    ```powershell
-   .\cloudflared.exe tunnel run --protocol auto --no-autoupdate --token <ваш-токен>
+   .\cloudflared.exe tunnel run --protocol auto --retries 10 --no-autoupdate --token <ваш-токен>
    ```
 2. В другом — бота:
    ```powershell
