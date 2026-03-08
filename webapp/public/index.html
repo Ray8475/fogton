@@ -305,8 +305,8 @@
       });
       showTab("home");
 
-      const API_RETRIES = 2;
-      const API_RETRY_DELAY_MS = 1500;
+      const API_RETRIES = 4;
+      const API_RETRY_DELAY_MS = 2500;
 
       async function api(path, opts = {}) {
         const { timeoutMs: _tm, ...fetchOpts } = opts;
@@ -609,23 +609,31 @@
         if (!el) return;
         let msg = message || "Не удалось загрузить";
         const lower = (msg + "").toLowerCase();
-        if (
+        const isNetworkError =
           lower.includes("failed to fetch") ||
           lower.includes("networkerror") ||
-          lower.includes("typeerror")
-        ) {
+          lower.includes("typeerror");
+        if (isNetworkError) {
           msg = "Нет связи с сервером. Попробуйте обновить чуть позже.";
         }
         el.innerHTML = "";
         const p = document.createElement("div");
         p.className = "text-xs tg-hint";
         p.textContent = `Ошибка загрузки: ${msg}`;
+        if (isNetworkError) {
+          const retryNote = document.createElement("div");
+          retryNote.className = "text-[11px] tg-hint mt-1";
+          retryNote.textContent = "Повтор через 5 сек...";
+          el.appendChild(p);
+          el.appendChild(retryNote);
+          setTimeout(() => loadData(), 5000);
+        }
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "mt-2 rounded-lg px-3 py-1.5 text-sm font-medium tg-btn";
         btn.textContent = "Обновить";
         btn.addEventListener("click", () => loadData());
-        el.appendChild(p);
+        if (!isNetworkError) el.appendChild(p);
         el.appendChild(btn);
       }
 
