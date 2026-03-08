@@ -606,18 +606,27 @@
 
       function setSectionError(elId, message) {
         const el = document.getElementById(elId);
-        if (el) {
-          let msg = message || "Не удалось загрузить";
-          const lower = (msg + "").toLowerCase();
-          if (
-            lower.includes("failed to fetch") ||
-            lower.includes("networkerror") ||
-            lower.includes("typeerror")
-          ) {
-            msg = "Нет связи с сервером. Попробуйте обновить чуть позже.";
-          }
-          el.innerHTML = `<div class="text-xs tg-hint">Ошибка загрузки: ${msg}</div>`;
+        if (!el) return;
+        let msg = message || "Не удалось загрузить";
+        const lower = (msg + "").toLowerCase();
+        if (
+          lower.includes("failed to fetch") ||
+          lower.includes("networkerror") ||
+          lower.includes("typeerror")
+        ) {
+          msg = "Нет связи с сервером. Попробуйте обновить чуть позже.";
         }
+        el.innerHTML = "";
+        const p = document.createElement("div");
+        p.className = "text-xs tg-hint";
+        p.textContent = `Ошибка загрузки: ${msg}`;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "mt-2 rounded-lg px-3 py-1.5 text-sm font-medium tg-btn";
+        btn.textContent = "Обновить";
+        btn.addEventListener("click", () => loadData());
+        el.appendChild(p);
+        el.appendChild(btn);
       }
 
       async function loadData() {
