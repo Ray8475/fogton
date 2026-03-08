@@ -20,6 +20,16 @@ if %errorlevel% equ 0 (
     timeout /t 1 /nobreak >nul
 )
 
+netstat -ano | findstr ":5500" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo WARNING: Port 5500 is already in use!
+    echo Killing processes on port 5500...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5500" ^| findstr "LISTENING"') do (
+        taskkill /PID %%a /F >nul 2>&1
+    )
+    timeout /t 1 /nobreak >nul
+)
+
 netstat -ano | findstr ":8081" >nul 2>&1
 if %errorlevel% equ 0 (
     echo WARNING: Port 8081 is already in use!
@@ -48,6 +58,10 @@ start "sync_gifts" /D "%ROOT%\backend" cmd /c python sync_gifts_from_thermos.py 
 echo Starting bot (run_bot.py) ...
 REM /k чтобы видеть traceback, если бот упадёт
 start "bot" /D "%ROOT%" cmd /k python run_bot.py
+
+echo Starting Mini App static server on http://127.0.0.1:5500 ...
+REM Раздаём статику Mini App из webapp/public
+start "webapp" /D "%ROOT%\webapp\public" cmd /k python -m http.server 5500
 
 echo Starting Cloudflare Tunnel (cloudflared) ...
 REM Читаем токен из .env файла через PowerShell (более надёжно)
