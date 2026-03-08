@@ -39,6 +39,7 @@ def list_markets(db: Session = Depends(get_db)):
                 "symbol": symbol,
                 "price_ton": price_ton,
                 "price_usdt": price_usdt,
+                "image_url": gift.image_url,
                 "active": True,
             })
     return {"markets": markets}
