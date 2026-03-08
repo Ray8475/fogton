@@ -74,9 +74,9 @@ if "%TUNNEL_TOKEN%"=="" (
     echo Skipping Cloudflare Tunnel startup.
 ) else (
     REM /k чтобы видеть ошибки туннеля
-    REM Оптимизация стабильности: protocol=auto (QUIC с fallback на HTTP/2), no-autoupdate (--retries в token-run не поддерживается)
+    REM protocol=http2 (TCP): если QUIC даёт timeout в сети — используем HTTP/2
     REM В логах cloudflared нормальны сообщения "client disconnected" и "context canceled" — туннель сам переподключается.
-    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel --no-autoupdate run --protocol auto --token "%TUNNEL_TOKEN%"
+    start "cloudflared" /D "%ROOT%" cmd /k cloudflared.exe tunnel --no-autoupdate run --protocol http2 --token "%TUNNEL_TOKEN%"
 )
 
 echo Starting price oracle (Thermos Proxy -> backend) ...
