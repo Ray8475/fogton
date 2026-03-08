@@ -4,6 +4,7 @@ import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
@@ -54,8 +55,14 @@ def auth_telegram(
     if user is None:
         user = User(telegram_user_id=telegram_user_id)
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another request created the same user concurrently; reload existing user
+            db.rollback()
+            user = db.query(User).filter(User.telegram_user_id == telegram_user_id).one()
+        else:
+            db.refresh(user)
 
     access_token = issue_access_token(
         subject=str(user.id),
